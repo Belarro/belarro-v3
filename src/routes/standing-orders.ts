@@ -1,10 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma, ApiError, ApiResponse } from '../index';
+import { AuthenticatedRequest, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
-// GET /standing-orders - List standing orders
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+// GET /standing-orders - List standing orders (admin only)
+router.get('/', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { customer_id, status, page = '1', limit = '20' } = req.query;
 
@@ -53,8 +54,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// GET /standing-orders/:id - Get single standing order
-router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// GET /standing-orders/:id - Get single standing order (admin only)
+router.get('/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
@@ -85,14 +86,43 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// POST /standing-orders - Create standing order
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+// POST /standing-orders - Create standing order (admin only)
+router.post('/', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { customer_id, notes, items } = req.body;
 
-    // Validate
+    // Validate required fields
     if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
-      throw new ApiError(400, 'VALIDATION_ERROR', 'Missing required fields: customer_id, items (array)');
+      throw new ApiError(400, 'VALIDATION_ERROR', 'Missing required fields: customer_id, items (non-empty array)');
+    }
+
+    // Validate max items (prevent abuse)
+    if (items.length > 100) {
+      throw new ApiError(400, 'VALIDATION_ERROR', 'Standing order can have maximum 100 items');
+    }
+
+    // Validate each item
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      if (!item.variant_id || !item.size_name) {
+        throw new ApiError(400, 'VALIDATION_ERROR', `Item ${i + 1}: Missing variant_id or size_name`);
+      }
+
+      if (!item.quantity || item.quantity <= 0 || item.quantity > 10000) {
+        throw new ApiError(400, 'VALIDATION_ERROR', `Item ${i + 1}: Quantity must be between 1 and 10,000`);
+      }
+
+      if (item.price_at_time_eur && (item.price_at_time_eur < 0 || item.price_at_time_eur > 10000)) {
+        throw new ApiError(400, 'VALIDATION_ERROR', `Item ${i + 1}: Price must be between €0 and €10,000`);
+      }
+
+      if (item.delivery_day_of_week !== undefined && item.delivery_day_of_week !== null) {
+        const dow = item.delivery_day_of_week;
+        if (dow < 0 || dow > 6 || !Number.isInteger(dow)) {
+          throw new ApiError(400, 'VALIDATION_ERROR', `Item ${i + 1}: delivery_day_of_week must be 0-6 (Mon-Sun)`);
+        }
+      }
     }
 
     // Check customer exists
@@ -165,8 +195,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// PATCH /standing-orders/:id - Update standing order
-router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// PATCH /standing-orders/:id - Update standing order (admin only)
+router.patch('/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { status, notes } = req.body;
@@ -210,8 +240,8 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
-// DELETE /standing-orders/:id - Delete standing order
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// DELETE /standing-orders/:id - Delete standing order (admin only)
+router.delete('/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 

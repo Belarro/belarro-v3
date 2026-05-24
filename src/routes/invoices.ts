@@ -1,10 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma, ApiError, ApiResponse } from '../index';
+import { AuthenticatedRequest, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
-// GET /invoices - List invoices
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+// GET /invoices - List invoices (admin only)
+router.get('/', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { customer_id, month, page = '1', limit = '20' } = req.query;
 
@@ -50,8 +51,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// GET /invoices/:id - Get single invoice
-router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// GET /invoices/:id - Get single invoice (admin only)
+router.get('/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
@@ -75,14 +76,33 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// POST /invoices - Generate monthly invoice
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+// POST /invoices - Generate monthly invoice (admin only)
+router.post('/', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { customer_id, invoice_month } = req.body;
 
-    // Validate
+    // Validate required fields
     if (!customer_id || !invoice_month) {
       throw new ApiError(400, 'VALIDATION_ERROR', 'Missing required fields: customer_id, invoice_month');
+    }
+
+    // Validate invoice_month format (YYYY-MM)
+    if (!/^\d{4}-\d{2}$/.test(invoice_month)) {
+      throw new ApiError(400, 'VALIDATION_ERROR', 'Invalid invoice_month format. Must be YYYY-MM (e.g., 2026-05)');
+    }
+
+    // Validate month is valid (01-12)
+    const [yearStr, monthStr] = invoice_month.split('-');
+    const monthNum = parseInt(monthStr);
+    if (monthNum < 1 || monthNum > 12) {
+      throw new ApiError(400, 'VALIDATION_ERROR', 'Invalid month. Must be between 01 and 12');
+    }
+
+    // Validate year is reasonable (not too far in future or past)
+    const yearNum = parseInt(yearStr);
+    const currentYear = new Date().getFullYear();
+    if (yearNum < currentYear - 5 || yearNum > currentYear + 2) {
+      throw new ApiError(400, 'VALIDATION_ERROR', `Invoice year must be between ${currentYear - 5} and ${currentYear + 2}`);
     }
 
     // Check customer exists
@@ -156,8 +176,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// PATCH /invoices/:id - Update invoice status
-router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// PATCH /invoices/:id - Update invoice status (admin only)
+router.patch('/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { status, sent_at, paid_at } = req.body;
@@ -196,8 +216,8 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
-// DELETE /invoices/:id - Delete invoice (draft only)
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// DELETE /invoices/:id - Delete invoice (draft only, admin only)
+router.delete('/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 

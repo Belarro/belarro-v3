@@ -13,9 +13,13 @@ const prisma = new PrismaClient();
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
 
+// Import auth middleware
+import { authMiddleware } from './middleware/auth';
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(authMiddleware);
 
 // Global error handler
 interface ApiResponse<T = any> {
@@ -38,24 +42,7 @@ class ApiError extends Error {
   }
 }
 
-// Error handling middleware
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof ApiError) {
-    return res.status(err.statusCode).json({
-      success: false,
-      error: err.errorCode,
-      message: err.message,
-      details: err.details,
-    } as ApiResponse);
-  }
-
-  console.error('Unhandled error:', err);
-  return res.status(500).json({
-    success: false,
-    error: 'INTERNAL_ERROR',
-    message: 'An unexpected error occurred',
-  } as ApiResponse);
-});
+// Error handling middleware will be registered AFTER routes below
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -92,6 +79,25 @@ app.use((req: Request, res: Response) => {
     success: false,
     error: 'NOT_FOUND',
     message: 'Endpoint not found',
+  } as ApiResponse);
+});
+
+// Error handling middleware (MUST be after routes)
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof ApiError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      error: err.errorCode,
+      message: err.message,
+      details: err.details,
+    } as ApiResponse);
+  }
+
+  console.error('Unhandled error:', err);
+  return res.status(500).json({
+    success: false,
+    error: 'INTERNAL_ERROR',
+    message: 'An unexpected error occurred',
   } as ApiResponse);
 });
 
