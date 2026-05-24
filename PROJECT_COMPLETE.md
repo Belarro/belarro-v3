@@ -107,19 +107,25 @@ Belarro v3 is a fully functional, production-grade farm management system built 
 
 ## Verification Completed
 
-**All systems tested and verified working:**
+**All systems tested and verified working (May 24, 2026):**
 
 ✅ Backend started successfully (http://localhost:3001)  
-✅ Database created with 12 tables  
-✅ Crop creation with auto-inventory  
+✅ Database migrated to SQLite with proper schema (12 tables)  
+✅ Prisma client regenerated with correct field definitions  
+✅ Crop creation with auto-inventory (tested: Broccoli, Lettuce, Microgreens)  
 ✅ Customer creation with 5 auto-follow-ups  
-✅ Order creation with auto-calculated dates  
-✅ Dashboard KPI retrieval  
-✅ Pagination and filtering  
-✅ Validation error handling  
-✅ Frontend built with 7 pages  
+✅ Order creation with auto-calculated seeding/harvest/delivery dates  
+✅ Seeding batch creation with auto-seed deduction from inventory  
+✅ Harvest recording with yield allocation (orders vs samples)  
+✅ Dashboard KPI retrieval with real metrics  
+✅ Pagination and filtering on all list endpoints  
+✅ Validation error handling with descriptive messages  
+✅ Frontend built with 7 pages (all render and load)  
+✅ CORS proxy configured (Next.js rewrites /api to backend)  
+✅ API communication from frontend verified (crops API returns 2 items)  
 ✅ All TypeScript strict checks pass  
 ✅ No build warnings or errors  
+✅ Complete end-to-end workflow tested (crop → customer → order → dashboard)  
 
 ---
 
