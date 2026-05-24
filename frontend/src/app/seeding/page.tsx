@@ -99,7 +99,7 @@ export default function SeedingPage() {
               <h3 className="text-lg font-bold mb-4">Create Seeding Batch</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.crop_id}
                   onChange={(e) => setFormData({ ...formData, crop_id: e.target.value })}
                   required
@@ -112,13 +112,13 @@ export default function SeedingPage() {
                 <input
                   type="number"
                   placeholder="Quantity (trays)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.quantity_trays}
                   onChange={(e) => setFormData({ ...formData, quantity_trays: e.target.value })}
                   required
                 />
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.batch_type}
                   onChange={(e) => setFormData({ ...formData, batch_type: e.target.value })}
                 >

@@ -103,7 +103,7 @@ export default function CropsPage() {
                 <input
                   type="text"
                   placeholder="Name (English)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.name_en}
                   onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
                   required
@@ -111,7 +111,7 @@ export default function CropsPage() {
                 <input
                   type="text"
                   placeholder="Name (German)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.name_de}
                   onChange={(e) => setFormData({ ...formData, name_de: e.target.value })}
                   required
@@ -119,7 +119,7 @@ export default function CropsPage() {
                 <input
                   type="number"
                   placeholder="Seeds per Tray (grams)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.seeds_per_tray}
                   onChange={(e) => setFormData({ ...formData, seeds_per_tray: e.target.value })}
                   required
@@ -127,7 +127,7 @@ export default function CropsPage() {
                 <input
                   type="number"
                   placeholder="Yield per Tray (grams)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.yield_per_tray}
                   onChange={(e) => setFormData({ ...formData, yield_per_tray: e.target.value })}
                   required
@@ -135,13 +135,13 @@ export default function CropsPage() {
                 <input
                   type="number"
                   placeholder="Total Growth Days"
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.total_growth_days}
                   onChange={(e) => setFormData({ ...formData, total_growth_days: e.target.value })}
                   required
                 />
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.seeding_schedule}
                   onChange={(e) => setFormData({ ...formData, seeding_schedule: e.target.value })}
                 >

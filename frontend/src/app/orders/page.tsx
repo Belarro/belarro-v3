@@ -113,7 +113,7 @@ export default function OrdersPage() {
               <h3 className="text-lg font-bold mb-4">Create New Order</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.customer_id}
                   onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
                   required
@@ -124,7 +124,7 @@ export default function OrdersPage() {
                   ))}
                 </select>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.product_variant_id}
                   onChange={(e) => setFormData({ ...formData, product_variant_id: e.target.value })}
                   required
@@ -137,7 +137,7 @@ export default function OrdersPage() {
                 <input
                   type="number"
                   placeholder="Quantity"
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
                   value={formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                   required
