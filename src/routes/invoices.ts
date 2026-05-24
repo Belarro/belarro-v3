@@ -100,16 +100,16 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Calculate total from orders this month
-    const monthStart = `${invoice_month}-01`;
     const [year, month] = invoice_month.split('-').map(Number);
-    const monthEnd = new Date(year, month, 0); // Last day of month
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59, 999); // Last second of month
 
     // Get all orders for this customer in this month
     const orders = await prisma.order.findMany({
       where: {
         customer_id,
         order_date: {
-          gte: new Date(monthStart),
+          gte: monthStart,
           lte: monthEnd,
         },
       },
