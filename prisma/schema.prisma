@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -16,15 +16,14 @@ datasource db {
 
 model Crop {
   id                  String   @id @default(cuid())
-  name_en             String   @db.VarChar(100)
-  name_de             String   @db.VarChar(100)
+  name_en             String   
+  name_de             String   
   photo_url           String?
   seeds_per_tray      Float    // grams
   yield_per_tray      Float    // grams
   total_growth_days   Int
   seeding_schedule    String   // "TUESDAY" | "FRIDAY"
   status              String   @default("active") // "active" | "paused" | "inactive"
-  growth_stages       Json? // JSON array of growth stages
 
   // Relations
   variants            ProductVariant[]
@@ -41,7 +40,7 @@ model Crop {
 model ProductVariant {
   id                  String   @id @default(cuid())
   crop_id             String
-  size_name           String   @db.VarChar(100) // "Container 30g", "100g", etc.
+  size_name           String    // "Container 30g", "100g", etc.
   size_grams          Float
   price_eur           Float
   container_qty       Int?
@@ -107,7 +106,7 @@ model SampleInventory {
 
 model Customer {
   id                      String   @id @default(cuid())
-  name                    String   @db.VarChar(100)
+  name                    String   
   address                 String?
   city                    String?
   email                   String?
