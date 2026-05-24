@@ -1,0 +1,261 @@
+// Belarro v3 — Farm Management System
+// Database Schema (Prisma ORM)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CROPS & PRODUCTS
+// ============================================
+
+model Crop {
+  id                  String   @id @default(cuid())
+  name_en             String   @db.VarChar(100)
+  name_de             String   @db.VarChar(100)
+  photo_url           String?
+  seeds_per_tray      Float    // grams
+  yield_per_tray      Float    // grams
+  total_growth_days   Int
+  seeding_schedule    String   // "TUESDAY" | "FRIDAY"
+  status              String   @default("active") // "active" | "paused" | "inactive"
+  growth_stages       Json? // JSON array of growth stages
+
+  // Relations
+  variants            ProductVariant[]
+  seed_inventory      SeedInventory?
+  seeding_batches     SeedingBatch[]
+  sample_inventory    SampleInventory?
+
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@index([status])
+}
+
+model ProductVariant {
+  id                  String   @id @default(cuid())
+  crop_id             String
+  size_name           String   @db.VarChar(100) // "Container 30g", "100g", etc.
+  size_grams          Float
+  price_eur           Float
+  container_qty       Int?
+
+  // Relations
+  crop                Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
+  orders              Order[]
+  package_inventory   PackageInventory?
+
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@index([crop_id])
+}
+
+// ============================================
+// INVENTORY
+// ============================================
+
+model SeedInventory {
+  id                      String   @id @default(cuid())
+  crop_id                 String   @unique
+  quantity_grams          Float    @default(0)
+  reorder_threshold_trays Int      @default(20)
+  last_purchase_date      DateTime?
+  last_purchase_qty_grams Float?
+
+  // Relations
+  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+}
+
+model PackageInventory {
+  id                      String   @id @default(cuid())
+  variant_id              String   @unique
+  quantity_available      Int      @default(0)
+  reorder_threshold       Int      @default(20)
+
+  // Relations
+  variant                 ProductVariant @relation(fields: [variant_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+}
+
+model SampleInventory {
+  id                      String   @id @default(cuid())
+  crop_id                 String   @unique
+  available_grams         Float    @default(0)
+
+  // Relations
+  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+}
+
+// ============================================
+// CUSTOMERS & RELATIONSHIPS
+// ============================================
+
+model Customer {
+  id                      String   @id @default(cuid())
+  name                    String   @db.VarChar(100)
+  address                 String?
+  city                    String?
+  email                   String?
+  whatsapp                String?
+  phone                   String?
+  status                  String   @default("prospect") // "prospect" | "active" | "paused" | "inactive"
+  net_days                Int      @default(30)
+  first_contact_date      DateTime @default(now())
+
+  // Relations
+  orders                  Order[]
+  visits                  Visit[]
+  follow_ups              FollowUp[]
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([status])
+  @@index([email])
+}
+
+model Visit {
+  id                      String   @id @default(cuid())
+  customer_id             String
+  visit_date              DateTime
+  notes                   String?
+
+  // Relations
+  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([customer_id])
+}
+
+model FollowUp {
+  id                      String   @id @default(cuid())
+  customer_id             String
+  follow_up_number        Int      // 1, 2, 3, 4, 5
+  follow_up_days          Int      // offset from first_contact_date
+  due_date                DateTime
+  status                  String   @default("pending") // "pending" | "sent" | "completed"
+  sent_via                String?  // "whatsapp" | "email" | "call" | "visit"
+  sent_date               DateTime?
+  notes                   String?
+
+  // Relations
+  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([customer_id])
+  @@index([status])
+  @@index([due_date])
+}
+
+// ============================================
+// ORDERS & FULFILLMENT
+// ============================================
+
+model Order {
+  id                      String   @id @default(cuid())
+  customer_id             String
+  product_variant_id      String
+  quantity                Float    // qty of variant
+  order_date              DateTime
+  next_delivery_date      DateTime?
+  expected_harvest_date   DateTime?
+  status                  String   @default("pending_seed") // "pending_seed" | "growing" | "ready_harvest" | "packed" | "delivered" | "partial_delivery" | "cancelled"
+  recurring               Boolean  @default(true)
+
+  // Relations
+  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  variant                 ProductVariant @relation(fields: [product_variant_id], references: [id], onDelete: Cascade)
+  fulfillments            OrderFulfillment[]
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([customer_id])
+  @@index([status])
+  @@index([product_variant_id])
+}
+
+// ============================================
+// SEEDING & HARVESTING
+// ============================================
+
+model SeedingBatch {
+  id                      String   @id @default(cuid())
+  crop_id                 String
+  seeding_date            DateTime
+  quantity_trays          Int
+  batch_type              String   // "order" | "sample"
+  expected_harvest_date   DateTime
+
+  // Relations
+  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
+  harvest_records         HarvestRecord[]
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([crop_id])
+  @@index([seeding_date])
+  @@index([expected_harvest_date])
+}
+
+model HarvestRecord {
+  id                              String   @id @default(cuid())
+  seeding_batch_id                String
+  harvest_date                    DateTime
+  actual_yield_grams              Float
+  yield_used_for_orders_grams     Float    @default(0)
+  yield_available_samples_grams   Float    @default(0)
+  notes                           String?
+
+  // Relations
+  seeding_batch                   SeedingBatch @relation(fields: [seeding_batch_id], references: [id], onDelete: Cascade)
+  fulfillments                    OrderFulfillment[]
+
+  created_at                      DateTime @default(now())
+  updated_at                      DateTime @updatedAt
+
+  @@index([seeding_batch_id])
+  @@index([harvest_date])
+}
+
+model OrderFulfillment {
+  id                      String   @id @default(cuid())
+  order_id                String
+  harvest_record_id       String
+  allocated_grams         Float
+  packed_date             DateTime?
+  delivery_date           DateTime?
+  delivered               Boolean  @default(false)
+  delivery_notes          String?
+
+  // Relations
+  order                   Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  harvest_record          HarvestRecord @relation(fields: [harvest_record_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([order_id])
+  @@index([harvest_record_id])
+  @@index([delivery_date])
+}
