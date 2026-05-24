@@ -93,6 +93,8 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     } as ApiResponse);
   }
 
+  const fs = require('fs');
+  fs.appendFileSync('/tmp/error.log', `\n${new Date().toISOString()} - ${err.stack || err}\n`);
   console.error('Unhandled error:', err);
   return res.status(500).json({
     success: false,
