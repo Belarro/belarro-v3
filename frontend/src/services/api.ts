@@ -226,6 +226,66 @@ class ApiClient {
     });
   }
 
+  // Invoices
+  async getInvoices(params?: Record<string, any>) {
+    const query = new URLSearchParams(params).toString();
+    return this.request<ApiResponse>(`/invoices?${query}`);
+  }
+
+  async getInvoice(id: string) {
+    return this.request<ApiResponse>(`/invoices/${id}`);
+  }
+
+  async generateInvoice(data: any) {
+    return this.request<ApiResponse>('/invoices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateInvoice(id: string, data: any) {
+    return this.request<ApiResponse>(`/invoices/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteInvoice(id: string) {
+    return this.request<ApiResponse>(`/invoices/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Standing Orders
+  async getStandingOrders(params?: Record<string, any>) {
+    const query = new URLSearchParams(params).toString();
+    return this.request<ApiResponse>(`/standing-orders?${query}`);
+  }
+
+  async getStandingOrder(id: string) {
+    return this.request<ApiResponse>(`/standing-orders/${id}`);
+  }
+
+  async createStandingOrder(data: any) {
+    return this.request<ApiResponse>('/standing-orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateStandingOrder(id: string, data: any) {
+    return this.request<ApiResponse>(`/standing-orders/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteStandingOrder(id: string) {
+    return this.request<ApiResponse>(`/standing-orders/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Dashboard
   async getDashboard() {
     return this.request<ApiResponse>('/dashboard');

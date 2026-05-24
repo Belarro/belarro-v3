@@ -8,7 +8,9 @@ const menuItems = [
   { label: 'Crops', href: '/crops', icon: '🌱' },
   { label: 'Customers', href: '/customers', icon: '👥' },
   { label: 'Orders', href: '/orders', icon: '📦' },
+  { label: 'Standing Orders', href: '/standing-orders', icon: '🔄' },
   { label: 'Inventory', href: '/inventory', icon: '📦' },
+  { label: 'Invoices', href: '/invoices', icon: '💰' },
   { label: 'Seeding', href: '/seeding', icon: '🌾' },
   { label: 'Follow-ups', href: '/follow-ups', icon: '📞' },
 ];
