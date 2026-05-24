@@ -16,8 +16,8 @@ datasource db {
 
 model Crop {
   id                  String   @id @default(cuid())
-  name_en             String   
-  name_de             String   
+  name_en             String
+  name_de             String
   photo_url           String?
   seeds_per_tray      Float    // grams
   yield_per_tray      Float    // grams
@@ -30,6 +30,7 @@ model Crop {
   seed_inventory      SeedInventory?
   seeding_batches     SeedingBatch[]
   sample_inventory    SampleInventory?
+  seed_usage_logs     SeedUsageLog[]
 
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
@@ -38,20 +39,21 @@ model Crop {
 }
 
 model ProductVariant {
-  id                  String   @id @default(cuid())
-  crop_id             String
-  size_name           String    // "Container 30g", "100g", etc.
-  size_grams          Float
-  price_eur           Float
-  container_qty       Int?
+  id                      String   @id @default(cuid())
+  crop_id                 String
+  size_name               String    // "Container 30g", "100g", etc.
+  size_grams              Float
+  price_eur               Float
+  container_qty           Int?
 
   // Relations
-  crop                Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
-  orders              Order[]
-  package_inventory   PackageInventory?
+  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
+  orders                  Order[]
+  package_inventory       PackageInventory?
+  standing_order_items    StandingOrderItem[]
 
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
 
   @@index([crop_id])
 }
@@ -106,7 +108,7 @@ model SampleInventory {
 
 model Customer {
   id                      String   @id @default(cuid())
-  name                    String   
+  name                    String
   address                 String?
   city                    String?
   email                   String?
@@ -120,6 +122,9 @@ model Customer {
   orders                  Order[]
   visits                  Visit[]
   follow_ups              FollowUp[]
+  invoices                Invoice[]
+  standing_orders         StandingOrder[]
+  sales_visits            SalesVisit[]
 
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
@@ -184,6 +189,7 @@ model Order {
   customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   variant                 ProductVariant @relation(fields: [product_variant_id], references: [id], onDelete: Cascade)
   fulfillments            OrderFulfillment[]
+  messages                Message[]
 
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
@@ -257,4 +263,133 @@ model OrderFulfillment {
   @@index([order_id])
   @@index([harvest_record_id])
   @@index([delivery_date])
+}
+
+// ============================================
+// INVOICING (V2 FEATURE)
+// ============================================
+
+model Invoice {
+  id                      String   @id @default(cuid())
+  customer_id             String
+  invoice_month           String   // "YYYY-MM"
+  total_amount_eur        Float
+  vat_amount_eur          Float?
+  status                  String   @default("draft") // "draft" | "sent" | "paid"
+  sent_at                 DateTime?
+  paid_at                 DateTime?
+
+  // Relations
+  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([customer_id])
+  @@index([invoice_month])
+  @@unique([customer_id, invoice_month])
+}
+
+// ============================================
+// SEED TRACKING (V2 FEATURE)
+// ============================================
+
+model SeedUsageLog {
+  id                      String   @id @default(cuid())
+  crop_id                 String
+  quantity_used_grams     Float
+  trays_seeded            Int
+  seeded_date             DateTime
+
+  // Relations
+  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+
+  @@index([crop_id])
+  @@index([seeded_date])
+}
+
+// ============================================
+// STANDING ORDERS (V2 FEATURE)
+// ============================================
+
+model StandingOrder {
+  id                      String   @id @default(cuid())
+  customer_id             String
+  status                  String   @default("active") // "active" | "paused" | "inactive"
+  notes                   String?
+
+  // Relations
+  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  items                   StandingOrderItem[]
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([customer_id])
+  @@index([status])
+}
+
+model StandingOrderItem {
+  id                      String   @id @default(cuid())
+  standing_order_id       String
+  variant_id              String
+  size_name               String   // "100g" | "225g" | "450g" | "container"
+  quantity                Int      // qty per delivery
+  price_at_time_eur       Float    // snapshot of price
+  delivery_day_of_week    Int?     // 0-6 for Mon-Sun, if recurring on specific day
+
+  // Relations
+  standing_order          StandingOrder @relation(fields: [standing_order_id], references: [id], onDelete: Cascade)
+  variant                 ProductVariant @relation(fields: [variant_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([standing_order_id])
+  @@index([variant_id])
+}
+
+// ============================================
+// SALES VISITS (V2 FEATURE)
+// ============================================
+
+model SalesVisit {
+  id                      String   @id @default(cuid())
+  customer_id             String
+  visit_date              DateTime
+  outcome                 String?  // "interested" | "not_interested" | "sample_sent" | "need_followup"
+  notes                   String?
+
+  // Relations
+  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@index([customer_id])
+  @@index([visit_date])
+}
+
+// ============================================
+// MESSAGES (V2 FEATURE)
+// ============================================
+
+model Message {
+  id                      String   @id @default(cuid())
+  from_user_id            String   // user ID (future: when auth added)
+  to_user_id              String   // user ID (future: when auth added)
+  order_id                String?
+  message_text            String
+  read_at                 DateTime?
+
+  // Relations
+  order                   Order?   @relation(fields: [order_id], references: [id], onDelete: SetNull)
+
+  created_at              DateTime @default(now())
+
+  @@index([from_user_id])
+  @@index([to_user_id])
+  @@index([order_id])
 }

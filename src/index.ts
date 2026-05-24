@@ -71,6 +71,8 @@ import customerRoutes from './routes/customers';
 import followUpRoutes from './routes/follow-ups';
 import inventoryRoutes from './routes/inventory';
 import dashboardRoutes from './routes/dashboard';
+import invoiceRoutes from './routes/invoices';
+import standingOrderRoutes from './routes/standing-orders';
 
 // Use routes
 app.use('/api/crops', cropRoutes);
@@ -81,6 +83,8 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/follow-ups', followUpRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/standing-orders', standingOrderRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
