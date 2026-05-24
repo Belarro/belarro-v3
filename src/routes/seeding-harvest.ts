@@ -124,7 +124,7 @@ router.get('/batches', async (req: Request, res: Response, next: NextFunction) =
               name_de: true,
             },
           },
-          harvest_record: true,
+          harvest_records: true,
         },
         skip,
         take: limitNum,
@@ -157,7 +157,7 @@ router.get('/batches/:id', async (req: Request, res: Response, next: NextFunctio
       where: { id },
       include: {
         crop: true,
-        harvest_record: true,
+        harvest_records: true,
       },
     });
 

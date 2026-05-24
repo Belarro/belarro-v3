@@ -90,7 +90,6 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       yield_per_tray,
       total_growth_days,
       seeding_schedule,
-      growth_stages,
     } = req.body;
 
     // Validate required fields
@@ -132,7 +131,6 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         yield_per_tray,
         total_growth_days,
         seeding_schedule,
-        growth_stages: growth_stages || null,
         status: 'active',
         seed_inventory: {
           create: {
