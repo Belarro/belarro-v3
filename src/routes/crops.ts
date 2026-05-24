@@ -55,7 +55,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 // GET /crops/:id - Get single crop
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     const crop = await prisma.crop.findUnique({
       where: { id },
@@ -165,7 +165,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 // PUT /crops/:id - Update crop
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const updateData = req.body;
 
     // Validate seeding_schedule if provided
@@ -215,7 +215,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 // DELETE /crops/:id - Delete crop
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     // Check if crop exists
     const crop = await prisma.crop.findUnique({
@@ -235,7 +235,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       message: 'Crop deleted successfully',
       details: {
         crop_id: id,
-        variants_deleted: crop.variants.length,
+        variants_deleted: crop.variants?.length || 0,
       },
     } as ApiResponse);
   } catch (error) {

@@ -65,10 +65,22 @@ app.get('/health', (req: Request, res: Response) => {
 // Import routes
 import cropRoutes from './routes/crops';
 import variantRoutes from './routes/variants';
+import orderRoutes from './routes/orders';
+import seedingHarvestRoutes from './routes/seeding-harvest';
+import customerRoutes from './routes/customers';
+import followUpRoutes from './routes/follow-ups';
+import inventoryRoutes from './routes/inventory';
+import dashboardRoutes from './routes/dashboard';
 
 // Use routes
 app.use('/api/crops', cropRoutes);
 app.use('/api/variants', variantRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/seeding', seedingHarvestRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/follow-ups', followUpRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

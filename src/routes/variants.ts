@@ -52,7 +52,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 // GET /variants/:id - Get single variant
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     const variant = await prisma.productVariant.findUnique({
       where: { id },
@@ -137,7 +137,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 // PUT /variants/:id - Update variant
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const updateData = req.body;
 
     // Validate numeric fields if provided
@@ -179,7 +179,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 // DELETE /variants/:id - Delete variant
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     // Check if variant exists
     const variant = await prisma.productVariant.findUnique({ where: { id } });
