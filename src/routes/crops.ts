@@ -58,7 +58,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       yield_per_tray: p.yield_per_tray ? parseFloat(p.yield_per_tray) : 0,
       total_growth_days: 14,
       seeding_schedule: 'TUESDAY',
-      status: p.availability_status === 'hidden' ? 'inactive' : (p.availability_status || 'active'),
+      status: p.availability_status === 'available' ? 'active' : (p.availability_status === 'paused' ? 'paused' : 'inactive'),
       created_at: p.created_at,
       updated_at: p.updated_at,
       variants: p.available_sizes?.map((size: string) => ({
