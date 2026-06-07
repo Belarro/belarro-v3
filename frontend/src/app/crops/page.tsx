@@ -93,59 +93,11 @@ export default function CropsPage() {
 
   const fetchCrops = async () => {
     try {
-      // Try backend first
-      const [activeRes, pausedRes] = await Promise.all([
-        apiClient.getCrops({ status: 'active' }),
-        apiClient.getCrops({ status: 'paused' }),
-      ]);
-      const allCrops = [...(activeRes.data || []), ...(pausedRes.data || [])];
-      setCrops(allCrops);
+      const res = await apiClient.getCrops({});
+      setCrops(res.data || []);
     } catch (error) {
-      console.error('Backend failed, trying Supabase directly:', error);
-      try {
-        // Fallback to direct Supabase fetch
-        const result = await apiClient.getCropsFromSupabase();
-        setCrops(result.data || []);
-        return;
-      } catch (supabaseError) {
-        console.error('Supabase fetch failed, using mock data:', supabaseError);
-        // Fallback to mock data
-        setCrops([
-        {
-          id: '1',
-          name_en: 'Cilantro',
-          name_de: 'Koriander',
-          flavor: 'Fresh, citrusy',
-          photo_url: '',
-          seeds_per_tray: 500,
-          yield_per_tray: 250,
-          total_growth_days: 21,
-          seeding_schedule: 'TUESDAY',
-          status: 'active',
-          variants: [
-            { id: 'v1', size_name: '30g', size_grams: 30, price_eur: 10 },
-            { id: 'v2', size_name: '225g', size_grams: 225, price_eur: 18 },
-          ],
-          growth_steps: [],
-        },
-        {
-          id: '2',
-          name_en: 'Microgreens Mix',
-          name_de: 'Microgreens Mix',
-          flavor: 'Mild, nutty',
-          photo_url: '',
-          seeds_per_tray: 800,
-          yield_per_tray: 400,
-          total_growth_days: 14,
-          seeding_schedule: 'TUESDAY',
-          status: 'active',
-          variants: [
-            { id: 'v3', size_name: '100g', size_grams: 100, price_eur: 12 },
-          ],
-          growth_steps: [],
-        },
-        ]);
-      }
+      console.error('Failed to load crops:', error);
+      addToast('Failed to load crops from V2 Supabase', 'error');
     } finally {
       setLoading(false);
     }

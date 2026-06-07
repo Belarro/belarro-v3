@@ -43,16 +43,10 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const products = (await response.json()) as any[];
     console.log('[CROPS] Got', products.length, 'products from Supabase');
 
-    // Filter by status if provided
+    // Show all non-hidden products (available + paused, excluding hidden)
     let filtered = products.filter((p: any) => p.availability_status !== 'hidden');
-    if (status === 'active') {
-      // active = visible OR available in Supabase
-      filtered = filtered.filter((p: any) => p.availability_status === 'available');
-    } else if (status === 'paused') {
-      filtered = filtered.filter((p: any) => p.availability_status === 'paused');
-    }
 
-    console.log('[CROPS] After filtering:', filtered.length, 'products');
+    console.log('[CROPS] After filtering (non-hidden):', filtered.length, 'products');
 
     const crops = filtered.map((p: any) => ({
       id: p.id,
