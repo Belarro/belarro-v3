@@ -5,11 +5,26 @@ interface CardProps {
   subtitle?: string;
   children: ReactNode;
   className?: string;
+  variant?: 'default' | 'alert' | 'success';
 }
 
-export default function Card({ title, subtitle, children, className = '' }: CardProps) {
+export default function Card({
+  title,
+  subtitle,
+  children,
+  className = '',
+  variant = 'default',
+}: CardProps) {
+  const variantClasses = {
+    default: 'bg-white border-gray-200',
+    alert: 'bg-red-50 border-red-200',
+    success: 'bg-green-50 border-green-200',
+  }[variant];
+
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
+    <div
+      className={`rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-200 p-6 ${variantClasses} ${className}`}
+    >
       {title && (
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>

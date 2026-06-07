@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 interface ButtonProps {
   children: ReactNode;
   onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'success';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   className?: string;
@@ -19,12 +19,14 @@ export default function Button({
   className = '',
   type = 'button',
 }: ButtonProps) {
-  const baseClass = 'font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClass =
+    'font-medium rounded-lg transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2';
 
   const variantClass = {
-    primary: 'bg-green-600 text-white hover:bg-green-700',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
-    danger: 'bg-red-600 text-white hover:bg-red-700',
+    primary: 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800 focus:ring-green-500',
+    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 active:bg-gray-400 focus:ring-gray-500',
+    danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-red-500',
+    success: 'bg-green-100 text-green-800 hover:bg-green-200 active:bg-green-300 focus:ring-green-500 border border-green-300',
   }[variant];
 
   const sizeClass = {

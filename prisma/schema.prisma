@@ -1,12 +1,12 @@
 // Belarro v3 — Farm Management System
-// Database Schema (Prisma ORM)
+// Database Schema (Prisma ORM) — Mapped to Supabase PostgreSQL
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -19,6 +19,8 @@ model Crop {
   name_en             String
   name_de             String
   photo_url           String?
+  flavor              String?
+  flavor_de           String?
   seeds_per_tray      Float    // grams
   yield_per_tray      Float    // grams
   total_growth_days   Int
@@ -31,11 +33,15 @@ model Crop {
   seeding_batches     SeedingBatch[]
   sample_inventory    SampleInventory?
   seed_usage_logs     SeedUsageLog[]
+  growth_steps        GrowthStep[]
 
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
+  deleted_at          DateTime? // Soft delete timestamp
 
+  @@map("belarro_v3_crop")
   @@index([status])
+  @@index([deleted_at])
 }
 
 model ProductVariant {
@@ -55,7 +61,21 @@ model ProductVariant {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_product_variant")
   @@index([crop_id])
+}
+
+model SizeTemplate {
+  id                  String   @id @default(cuid())
+  size_name           String   @unique  // "100g", "225g", "450g"
+  size_grams          Float
+  price_eur           Float
+  description         String?
+
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@map("belarro_v3_size_template")
 }
 
 // ============================================
@@ -75,6 +95,8 @@ model SeedInventory {
 
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
+
+  @@map("belarro_v3_seed_inventory")
 }
 
 model PackageInventory {
@@ -88,6 +110,8 @@ model PackageInventory {
 
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
+
+  @@map("belarro_v3_package_inventory")
 }
 
 model SampleInventory {
@@ -100,6 +124,8 @@ model SampleInventory {
 
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
+
+  @@map("belarro_v3_sample_inventory")
 }
 
 // ============================================
@@ -109,6 +135,8 @@ model SampleInventory {
 model Customer {
   id                      String   @id @default(cuid())
   name                    String
+  restaurant_name         String?
+  contact_person          String?
   address                 String?
   city                    String?
   email                   String?
@@ -129,6 +157,7 @@ model Customer {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_customer")
   @@index([status])
   @@index([email])
 }
@@ -145,6 +174,7 @@ model Visit {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_visit")
   @@index([customer_id])
 }
 
@@ -165,6 +195,7 @@ model FollowUp {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_follow_up")
   @@index([customer_id])
   @@index([status])
   @@index([due_date])
@@ -194,6 +225,7 @@ model Order {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_order")
   @@index([customer_id])
   @@index([status])
   @@index([product_variant_id])
@@ -218,6 +250,7 @@ model SeedingBatch {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_seeding_batch")
   @@index([crop_id])
   @@index([seeding_date])
   @@index([expected_harvest_date])
@@ -239,6 +272,7 @@ model HarvestRecord {
   created_at                      DateTime @default(now())
   updated_at                      DateTime @updatedAt
 
+  @@map("belarro_v3_harvest_record")
   @@index([seeding_batch_id])
   @@index([harvest_date])
 }
@@ -260,6 +294,7 @@ model OrderFulfillment {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_order_fulfillment")
   @@index([order_id])
   @@index([harvest_record_id])
   @@index([delivery_date])
@@ -285,6 +320,7 @@ model Invoice {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_invoice")
   @@index([customer_id])
   @@index([invoice_month])
   @@unique([customer_id, invoice_month])
@@ -306,6 +342,7 @@ model SeedUsageLog {
 
   created_at              DateTime @default(now())
 
+  @@map("belarro_v3_seed_usage_log")
   @@index([crop_id])
   @@index([seeded_date])
 }
@@ -327,6 +364,7 @@ model StandingOrder {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_standing_order")
   @@index([customer_id])
   @@index([status])
 }
@@ -347,6 +385,7 @@ model StandingOrderItem {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_standing_order_item")
   @@index([standing_order_id])
   @@index([variant_id])
 }
@@ -368,6 +407,7 @@ model SalesVisit {
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
+  @@map("belarro_v3_sales_visit")
   @@index([customer_id])
   @@index([visit_date])
 }
@@ -389,7 +429,53 @@ model Message {
 
   created_at              DateTime @default(now())
 
+  @@map("belarro_v3_message")
   @@index([from_user_id])
   @@index([to_user_id])
   @@index([order_id])
+}
+
+// ============================================
+// GROWTH PROCEDURES (NEW)
+// ============================================
+
+model GrowthStep {
+  id         String   @id @default(cuid())
+  crop_id    String
+  step_order Int
+  step_type  String   // "soak" | "seed" | "stack" | "blackout" | "humidity_dome" | "light" | "cover_soil" | "harvest"
+  duration_hours Int?
+  notes      String?
+
+  // Relations
+  crop       Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("belarro_v3_growth_step")
+  @@index([crop_id])
+}
+
+// ============================================
+// AUDIT LOG — DATA PROTECTION
+// ============================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // "CREATE" | "UPDATE" | "DELETE" | "RESTORE"
+  entity_type String   // "Crop" | "ProductVariant" | "Order" etc.
+  entity_id   String   // ID of the changed record
+  user_id     String?  // Future: who made the change
+  old_values  String?  // JSON string of previous values
+  new_values  String?  // JSON string of new values
+  reason      String?  // Why was this changed
+
+  created_at  DateTime @default(now())
+
+  @@map("belarro_v3_audit_log")
+  @@index([entity_type])
+  @@index([entity_id])
+  @@index([action])
+  @@index([created_at])
 }

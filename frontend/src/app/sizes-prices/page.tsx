@@ -305,14 +305,25 @@ export default function SizesPricesPage() {
                 {isEditing ? (
                   <>
                     <Button
-                      onClick={() => setIsEditing(false)}
+                      onClick={() => {
+                        setIsEditing(false);
+                        setSizeGrams('');
+                        setPriceEur('');
+                        setSizeType('grams');
+                      }}
                       variant="secondary"
                       size="md"
                     >
                       Cancel
                     </Button>
                     <Button
-                      onClick={() => setIsEditing(false)}
+                      onClick={async () => {
+                        setIsEditing(false);
+                        setSizeGrams('');
+                        setPriceEur('');
+                        setSizeType('grams');
+                        await loadAllVariants(crops);
+                      }}
                       variant="primary"
                       size="md"
                     >

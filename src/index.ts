@@ -1,25 +1,38 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import multer from 'multer';
+import { prisma } from './db';
 
 // Load environment variables
 dotenv.config();
 
-// Initialize Prisma
-const prisma = new PrismaClient();
-
 // Initialize Express
 const app: Express = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Import auth middleware
 import { authMiddleware } from './middleware/auth';
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(authMiddleware);
+app.use(express.json({ limit: '50mb' }));
+
+// Multer for file uploads (for photo uploads)
+export const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB max
+});
+
+// Serve static files (for uploaded photos)
+app.use(express.static('public'));
+
+// Health check (before auth)
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ success: true, message: 'API is running' });
+});
+
+// Routes are registered below
 
 // Global error handler
 interface ApiResponse<T = any> {
@@ -44,11 +57,6 @@ class ApiError extends Error {
 
 // Error handling middleware will be registered AFTER routes below
 
-// Health check
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ success: true, message: 'API is running' });
-});
-
 // Import routes
 import cropRoutes from './routes/crops';
 import variantRoutes from './routes/variants';
@@ -60,8 +68,21 @@ import inventoryRoutes from './routes/inventory';
 import dashboardRoutes from './routes/dashboard';
 import invoiceRoutes from './routes/invoices';
 import standingOrderRoutes from './routes/standing-orders';
+import growthStepRoutes from './routes/growth-steps';
+import sizeTemplateRoutes from './routes/size-templates';
+import publicRoutes from './routes/public';
 
-// Use routes
+// Use routes (public routes first, before auth middleware)
+app.use('/api/public', publicRoutes);
+
+app.use(authMiddleware);
+
+// Log crops requests for debugging
+app.use('/api/crops', (req, res, next) => {
+  console.log('[INDEX] Request to /api/crops:', req.method, req.path, req.query);
+  next();
+});
+
 app.use('/api/crops', cropRoutes);
 app.use('/api/variants', variantRoutes);
 app.use('/api/orders', orderRoutes);
@@ -72,6 +93,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/standing-orders', standingOrderRoutes);
+app.use('/api/growth-steps', growthStepRoutes);
+app.use('/api/size-templates', sizeTemplateRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
@@ -84,6 +107,9 @@ app.use((req: Request, res: Response) => {
 
 // Error handling middleware (MUST be after routes)
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('[ERROR] Path:', req.path, 'Method:', req.method);
+  console.error('[ERROR] Full error:', err);
+
   if (err instanceof ApiError) {
     return res.status(err.statusCode).json({
       success: false,
@@ -93,9 +119,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     } as ApiResponse);
   }
 
-  const fs = require('fs');
-  fs.appendFileSync('/tmp/error.log', `\n${new Date().toISOString()} - ${err.stack || err}\n`);
-  console.error('Unhandled error:', err);
+  console.error('Unhandled error:', err instanceof Error ? err.message : String(err));
   return res.status(500).json({
     success: false,
     error: 'INTERNAL_ERROR',
@@ -106,9 +130,14 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // Start server
 const startServer = async () => {
   try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`;
-    console.log('✓ Database connection successful');
+    // Test database connection (optional - server starts even if DB fails)
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      console.log('✓ Database connection successful');
+    } catch (dbError) {
+      console.warn('⚠ Database connection failed, but server starting anyway');
+      console.warn('  Details:', dbError instanceof Error ? dbError.message : String(dbError));
+    }
 
     // Start listening
     app.listen(PORT, () => {

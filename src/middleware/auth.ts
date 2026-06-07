@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { ApiError } from '../index';
 
 // For MVP: hardcode admin user. In production, decode JWT from Authorization header
 export interface AuthenticatedRequest extends Request {

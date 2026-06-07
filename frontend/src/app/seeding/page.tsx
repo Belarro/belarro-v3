@@ -5,6 +5,9 @@ import Layout from '@/components/Layout';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 import Table from '@/components/Table';
+import Input from '@/components/Input';
+import Modal from '@/components/Modal';
+import { ToastContainer, useToast } from '@/components/Toast';
 import { apiClient } from '@/services/api';
 
 interface SeedingBatch {
@@ -26,6 +29,7 @@ export default function SeedingPage() {
     quantity_trays: '',
     batch_type: 'order',
   });
+  const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
     fetchBatches();
@@ -38,6 +42,7 @@ export default function SeedingPage() {
       setBatches(response.data || []);
     } catch (error) {
       console.error('Failed to load batches:', error);
+      addToast('Failed to load seeding batches', 'error');
     } finally {
       setLoading(false);
     }
@@ -49,6 +54,7 @@ export default function SeedingPage() {
       setCrops(response.data || []);
     } catch (error) {
       console.error('Failed to load crops:', error);
+      addToast('Failed to load crops', 'error');
     }
   };
 
@@ -66,9 +72,11 @@ export default function SeedingPage() {
         batch_type: 'order',
       });
       setShowModal(false);
+      addToast('Seeding batch created successfully', 'success');
       fetchBatches();
     } catch (error) {
       console.error('Failed to create batch:', error);
+      addToast('Failed to create seeding batch', 'error');
     }
   };
 
@@ -85,7 +93,13 @@ export default function SeedingPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold text-gray-900">Seeding Batches</h2>
-          <Button onClick={() => setShowModal(true)}>+ New Batch</Button>
+          <Button
+            variant="primary"
+            onClick={() => setShowModal(true)}
+            className="focus:ring-2 focus:ring-green-500"
+          >
+            + New Batch
+          </Button>
         </div>
 
         <Card>
@@ -93,46 +107,64 @@ export default function SeedingPage() {
         </Card>
 
         {/* Modal */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-bold mb-4">Create Seeding Batch</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
-                  value={formData.crop_id}
-                  onChange={(e) => setFormData({ ...formData, crop_id: e.target.value })}
-                  required
-                >
-                  <option value="">Select Crop</option>
-                  {crops.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name_en}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  placeholder="Quantity (trays)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
-                  value={formData.quantity_trays}
-                  onChange={(e) => setFormData({ ...formData, quantity_trays: e.target.value })}
-                  required
-                />
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-white"
-                  value={formData.batch_type}
-                  onChange={(e) => setFormData({ ...formData, batch_type: e.target.value })}
-                >
-                  <option value="order">Order</option>
-                  <option value="sample">Sample</option>
-                </select>
-                <div className="flex gap-2">
-                  <Button variant="primary" type="submit">Create</Button>
-                  <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-                </div>
-              </form>
+        <Modal
+          isOpen={showModal}
+          title="Create Seeding Batch"
+          onClose={() => setShowModal(false)}
+          onSubmit={() => {
+            const form = document.querySelector('form') as HTMLFormElement;
+            form?.dispatchEvent(new Event('submit', { bubbles: true }));
+          }}
+          submitText="Create"
+          submitVariant="primary"
+        >
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="crop_id" className="block text-sm font-medium text-gray-900 mb-2">
+                Crop
+              </label>
+              <select
+                id="crop_id"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                value={formData.crop_id}
+                onChange={(e) => setFormData({ ...formData, crop_id: e.target.value })}
+                required
+              >
+                <option value="">Select Crop</option>
+                {crops.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name_en}</option>
+                ))}
+              </select>
             </div>
-          </div>
-        )}
+
+            <Input
+              id="quantity_trays"
+              type="number"
+              label="Quantity (trays)"
+              placeholder="Enter number of trays"
+              value={formData.quantity_trays}
+              onChange={(e) => setFormData({ ...formData, quantity_trays: e.target.value })}
+              required
+            />
+
+            <div>
+              <label htmlFor="batch_type" className="block text-sm font-medium text-gray-900 mb-2">
+                Batch Type
+              </label>
+              <select
+                id="batch_type"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                value={formData.batch_type}
+                onChange={(e) => setFormData({ ...formData, batch_type: e.target.value })}
+              >
+                <option value="order">Order</option>
+                <option value="sample">Sample</option>
+              </select>
+            </div>
+          </form>
+        </Modal>
+
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
       </div>
     </Layout>
   );

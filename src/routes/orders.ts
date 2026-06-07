@@ -56,17 +56,59 @@ const calculateNextDeliveryDate = (harvestDate: Date): Date => {
 // GET /orders - List orders with filters
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const orders: any[] = [];
-    const total = 0;
+    const { customer_id, status, recurring, page = '1', limit = '20' } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = {};
+    if (customer_id) where.customer_id = customer_id as string;
+    if (status) where.status = status as string;
+    if (recurring !== undefined) where.recurring = recurring === 'true';
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          variant: {
+            select: {
+              id: true,
+              size_name: true,
+              size_grams: true,
+              price_eur: true,
+              crop: {
+                select: {
+                  id: true,
+                  name_en: true,
+                  name_de: true,
+                },
+              },
+            },
+          },
+        },
+        skip,
+        take: limitNum,
+        orderBy: { created_at: 'desc' },
+      }),
+      prisma.order.count({ where }),
+    ]);
 
     res.json({
       success: true,
       data: orders,
       pagination: {
-        page: 1,
-        limit: 20,
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: 0,
+        pages: Math.ceil(total / limitNum),
       },
     } as ApiResponse);
   } catch (error) {
@@ -151,17 +193,21 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const harvestDate = calculateHarvestDate(seedingDate, variant.crop.total_growth_days);
     const nextDeliveryDate = calculateNextDeliveryDate(harvestDate);
 
+    // Calculate seeds needed: quantity (trays) × seeds_per_tray
+    const seedsNeeded = quantity * variant.crop.seeds_per_tray;
+    console.log('[ORDER] Creating order - seeds_needed:', seedsNeeded, 'crop_id:', variant.crop_id);
+
+    // Create order and deduct from inventory in transaction
     const order = await prisma.order.create({
       data: {
         customer_id,
         product_variant_id,
         quantity,
         order_date: orderDate,
-        seeding_date: seedingDate,
         expected_harvest_date: harvestDate,
         next_delivery_date: nextDeliveryDate,
-        status: 'pending',
-        recurring: recurring || false,
+        status: 'pending_seed',
+        recurring: recurring === 'true' || recurring === true || false,
       },
       include: {
         customer: {
@@ -188,6 +234,23 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         },
       },
     });
+
+    // Deduct from seed inventory
+    try {
+      console.log('[ORDER] Attempting to deduct from inventory...');
+      const updated = await prisma.seedInventory.update({
+        where: { crop_id: variant.crop_id },
+        data: {
+          quantity_grams: {
+            decrement: seedsNeeded,
+          },
+        },
+      });
+      console.log('[ORDER] Inventory updated successfully. New quantity:', updated.quantity_grams);
+    } catch (inventoryError) {
+      console.error('[ORDER] Failed to deduct from inventory:', inventoryError);
+      // Don't fail order creation, just log the error
+    }
 
     res.status(201).json({
       success: true,
