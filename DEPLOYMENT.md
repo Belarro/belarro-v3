@@ -1,43 +1,86 @@
 # Belarro V3 Deployment Guide
 
-## Deployment Status
+## 🎯 Deployment Status (June 8, 2026)
 
-### ✅ Completed
-- [x] GitHub repository: https://github.com/Belarro/belarro-v3
-- [x] Frontend deployed to Vercel
-- [x] Database: V2 Supabase (gcgscmtjesyiziebutzw.supabase.co)
-- [x] All 25+ varieties loading from V2 Supabase
+### ✅ Phase 1: Infrastructure Complete
+- [x] GitHub: https://github.com/Belarro/belarro-v3
+- [x] Frontend: Deployed to Vercel (Live)
+- [x] Database: V2 Supabase (55 varieties, 25+ available)
+- [x] API: Serverless functions configured
+- [x] TypeScript build: ✅ Passing
 
-### Frontend Deployment
-- **Current URL:** https://frontend-l5ru2eno9-ron-s-projects-0803a77d.vercel.app
-- **Status:** ✅ Live and working
+### Frontend Deployment (Live)
+- **URL:** https://frontend-l5ru2eno9-ron-s-projects-0803a77d.vercel.app
+- **Status:** ✅ All 25+ crops displaying correctly
+- **Admin Dashboard:** Full access to crops, orders, inventory, customers
 
-### Backend & Database
-- **Backend:** Running on localhost:3002 (Express + TypeScript)
-- **Database:** V2 Supabase (PostgreSQL)
-- **Varieties:** 55 total, 25+ available
-- **Status:** ✅ Connected and syncing data
+### Backend Deployment (Ready)
+- **Architecture:** Vercel serverless functions (api/handler.ts)
+- **Routes:** All 36+ endpoints configured
+  - `/api/crops` ✅
+  - `/api/customers` ✅
+  - `/api/orders` ✅
+  - `/api/inventory` ✅
+  - `/api/seeding` ✅
+  - `/api/invoices` ✅
+  - `/api/standing-orders` ✅
+  - `/api/follow-ups` ✅
+  - `/api/dashboard` ✅
+- **Status:** Ready to deploy (no code changes needed)
 
-## Next Steps for Production
+### Database Integration
+- **Primary:** V2 Supabase (gcgscmtjesyiziebutzw)
+- **Schema:** Products table with 55 varieties
+- **Data Sync:** Real-time REST API calls from backend
+- **Status:** ✅ Connected and working
 
-1. **Set up custom domains in Vercel:**
-   - Staging: `v3-staging.belarro.com` or similar
-   - Production: `v3.belarro.com` or root domain
+## 📋 Remaining for Go-Live
 
-2. **Deploy backend:**
-   - Option A: Vercel serverless functions
-   - Option B: Railway/Fly.io for persistent API
+### Phase 2: Production Environment
+1. **Environment Variables in Vercel:**
+   - SUPABASE_URL (for production)
+   - SUPABASE_ANON_KEY (for production)
+   - NEXT_PUBLIC_API_URL (production API endpoint)
+   - DATABASE_URL (if using Prisma PostgreSQL)
 
-3. **Configure Vercel environment variables:**
-   - Add Supabase credentials
-   - Set API URLs for staging vs production
+2. **Custom Domains:**
+   - Add primary domain (e.g., belarro.com or app.belarro.com)
+   - SSL/TLS automatically provisioned by Vercel
 
-4. **E2E testing on staging**
+3. **Staging Environment (Optional):**
+   - Create separate Vercel deployment for staging
+   - Point to staging Supabase instance (if desired)
 
-5. **Go live with production deployment**
+### Phase 3: Testing & Hardening
+1. E2E testing on production-like environment
+2. Security audit (auth, validation, rate limiting)
+3. Performance testing (load, response times)
+4. Backup & disaster recovery setup
 
-## Tech Stack
-- Frontend: Next.js 16 + React 19 (Vercel)
-- Backend: Express + TypeScript (Node.js)
-- Database: Supabase PostgreSQL
-- All data from V2 Supabase in real-time
+### Phase 4: Parallel Projects
+1. **Website (belarro.com)** — Marketing + product showcase
+2. **Chef/Restaurant App** — Customer ordering system
+3. **Mobile Apps** — iOS/Android
+
+## 🚀 To Deploy Now
+
+```bash
+# Option 1: Push to main branch (auto-deploys to Vercel)
+git push origin master
+
+# Option 2: Manual deployment via Vercel CLI
+vercel --prod
+
+# Set environment variables in Vercel dashboard:
+# Settings > Environment Variables
+SUPABASE_URL: https://gcgscmtjesyiziebutzw.supabase.co
+SUPABASE_ANON_KEY: [from V2 instance]
+NEXT_PUBLIC_API_URL: https://your-domain.com
+```
+
+## 🏗️ Tech Stack
+- **Frontend:** Next.js 16 + React 19 (Vercel)
+- **Backend:** Express + TypeScript (Vercel Serverless)
+- **Database:** Supabase PostgreSQL (V2 instance)
+- **Hosting:** Vercel (unified frontend + backend)
+- **Build:** TypeScript compilation verified ✅
