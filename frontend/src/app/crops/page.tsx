@@ -114,11 +114,14 @@ export default function CropsPage() {
   }, [selectedCropId]);
 
   const selectedCrop = crops.find((c) => c.id === selectedCropId);
-  const filteredCrops = crops.filter((c) =>
-    c.status === activeTab &&
-    (c.name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.name_de.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredCrops = crops.filter((c) => {
+    const isMatchingTab = activeTab === 'active'
+      ? (c.status === 'active' || c.status === 'available')
+      : c.status === activeTab;
+    const isMatchingSearch = c.name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.name_de.toLowerCase().includes(searchQuery.toLowerCase());
+    return isMatchingTab && isMatchingSearch;
+  });
 
   const handleAddVariant = () => {
     if (!newVariant.size_name || !newVariant.price_eur) return;
@@ -340,7 +343,7 @@ export default function CropsPage() {
   };
 
   const statusCounts = {
-    active: crops.filter((c) => c.status === 'active').length,
+    active: crops.filter((c) => c.status === 'active' || c.status === 'available').length,
     paused: crops.filter((c) => c.status === 'paused').length,
   };
 
