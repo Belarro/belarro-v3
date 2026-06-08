@@ -82,17 +82,9 @@ export default function CropsPage() {
     status: 'active',
   });
 
-  useEffect(() => {
-    fetchCrops();
-  }, []);
-
-  useEffect(() => {
-    setSelectedCropId('');
-    setIsNewCrop(false);
-  }, [activeTab]);
-
   const fetchCrops = async () => {
     try {
+      setLoading(true);
       const res = await apiClient.getCrops({});
       setCrops(res.data || []);
     } catch (error) {
@@ -105,6 +97,11 @@ export default function CropsPage() {
 
   useEffect(() => {
     fetchCrops();
+  }, []);
+
+  useEffect(() => {
+    setSelectedCropId('');
+    setIsNewCrop(false);
   }, [activeTab]);
 
   useEffect(() => {
