@@ -41,11 +41,12 @@ export default function SizesPricesPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await apiClient.getCrops({ status: 'active' });
-        setCrops(res.data || []);
-        if (res.data?.[0]) {
-          setSelectedCropId(res.data[0].id);
-          await loadAllVariants(res.data);
+        const res = await apiClient.getCrops({});
+        const cropsData = res.data || [];
+        setCrops(cropsData);
+        if (cropsData.length > 0) {
+          setSelectedCropId(cropsData[0].id);
+          await loadAllVariants(cropsData);
         }
       } catch (err) {
         console.error('Load crops failed:', err);
