@@ -126,13 +126,13 @@ export default function CropsPage() {
   const handleAddVariant = () => {
     if (!newVariant.size_name || !newVariant.price_eur) return;
     const sizeGrams =
-      variantType === 'container' ? 0 : parseFloat(newVariant.size_grams.toString());
+      variantType === 'container' ? 0 : (newVariant.size_grams ? parseFloat(newVariant.size_grams) : 0);
     setVariants([
       ...variants,
       {
         size_name: variantType === 'container' ? 'Container' : newVariant.size_name,
         size_grams: sizeGrams,
-        price_eur: parseFloat(newVariant.price_eur.toString()),
+        price_eur: newVariant.price_eur ? parseFloat(newVariant.price_eur) : 0,
       },
     ]);
     setNewVariant({ size_name: '', size_grams: '', price_eur: '' });
@@ -145,7 +145,7 @@ export default function CropsPage() {
       ...steps,
       {
         step_type: newStep.step_type,
-        duration_hours: newStep.duration_hours ? parseInt(newStep.duration_hours.toString()) : null,
+        duration_hours: newStep.duration_hours ? parseInt(newStep.duration_hours) : null,
         notes: newStep.notes,
       },
     ]);
@@ -171,9 +171,9 @@ export default function CropsPage() {
         name_en: formData.name_en,
         name_de: formData.name_de,
         flavor: formData.flavor || null,
-        seeds_per_tray: parseFloat(formData.seeds_per_tray.toString()),
-        yield_per_tray: parseFloat(formData.yield_per_tray.toString()),
-        total_growth_days: parseInt(formData.total_growth_days.toString()),
+        seeds_per_tray: formData.seeds_per_tray ? parseFloat(formData.seeds_per_tray) : 0,
+        yield_per_tray: formData.yield_per_tray ? parseFloat(formData.yield_per_tray) : 0,
+        total_growth_days: formData.total_growth_days ? parseInt(formData.total_growth_days) : 0,
         seeding_schedule: formData.seeding_schedule,
         status: formData.status,
       };
@@ -266,12 +266,12 @@ export default function CropsPage() {
       const crop = response.data;
       if (crop) {
         setFormData({
-          name_en: crop.name_en,
-          name_de: crop.name_de,
+          name_en: crop.name_en || '',
+          name_de: crop.name_de || '',
           flavor: crop.flavor || '',
-          seeds_per_tray: crop.seeds_per_tray.toString(),
-          yield_per_tray: crop.yield_per_tray.toString(),
-          total_growth_days: crop.total_growth_days.toString(),
+          seeds_per_tray: crop.seeds_per_tray ? crop.seeds_per_tray.toString() : '',
+          yield_per_tray: crop.yield_per_tray ? crop.yield_per_tray.toString() : '',
+          total_growth_days: crop.total_growth_days ? crop.total_growth_days.toString() : '',
           seeding_schedule: crop.seeding_schedule || 'TUESDAY',
           status: crop.status || 'active',
         });
