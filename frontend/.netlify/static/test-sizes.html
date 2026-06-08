@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Sizes/Prices</title>
+</head>
+<body>
+    <h1>Testing Sizes & Prices Fix</h1>
+    <div id="log"></div>
+    <script>
+        const log = (msg) => {
+            console.log(msg);
+            document.getElementById('log').innerHTML += msg + '<br>';
+        };
+
+        (async () => {
+            try {
+                // Get crops
+                const cropsRes = await fetch('/api/crops?status=active');
+                const cropsData = await cropsRes.json();
+                const crop = cropsData.data[0];
+                log(`Testing with crop: ${crop.name_en} (${crop.id})`);
+
+                // Add first variant
+                const v1Res = await fetch('/api/variants', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        crop_id: crop.id,
+                        size_name: '225g',
+                        size_grams: 225,
+                        price_eur: 18
+                    })
+                });
+                const v1Data = await v1Res.json();
+                log(`✓ Created 225g €18`);
+
+                // Add second variant
+                const v2Res = await fetch('/api/variants', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        crop_id: crop.id,
+                        size_name: '450g',
+                        size_grams: 450,
+                        price_eur: 28
+                    })
+                });
+                const v2Data = await v2Res.json();
+                log(`✓ Created 450g €28`);
+
+                // Get all variants
+                const varsRes = await fetch(`/api/variants?crop_id=${crop.id}`);
+                const varsData = await varsRes.json();
+                log(`✓ Total variants: ${varsData.data.length}`);
+                varsData.data.forEach(v => {
+                    log(`  - ${v.size_name}: €${v.price_eur}`);
+                });
+
+                if (varsData.data.length === 2) {
+                    log('✅ SUCCESS: Both variants saved!');
+                } else {
+                    log('❌ FAILED: Only ' + varsData.data.length + ' variant(s) saved');
+                }
+            } catch (err) {
+                log('Error: ' + err.message);
+            }
+        })();
+    </script>
+</body>
+</html>
