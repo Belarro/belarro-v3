@@ -1,47 +1,27 @@
 {
-  "name": "belarro-v3",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "dev": "ts-node src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint src",
-    "format": "prettier --write src",
-    "type-check": "tsc --noEmit",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
-    "db:push": "prisma db push",
-    "db:seed": "ts-node prisma/seed.ts"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.43.0",
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.9.1",
-    "@vercel/node": "^3.0.11",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "multer": "^2.1.1",
-    "prisma": "^5.22.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/jest": "^30.0.0",
-    "@types/multer": "^2.1.0",
-    "eslint": "^10.4.0",
-    "jest": "^30.4.2",
-    "prettier": "^3.8.3",
-    "ts-jest": "^29.4.11"
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
