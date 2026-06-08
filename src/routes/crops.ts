@@ -50,29 +50,28 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     const crops = filtered.map((p: any) => {
       const mappedStatus = p.availability_status === 'available' ? 'active' : (p.availability_status === 'paused' ? 'paused' : 'inactive');
-      console.log(`[CROPS MAP] ${p.name_en}: availability_status='${p.availability_status}' → status='${mappedStatus}'`);
       return {
-      id: p.id,
-      name_en: p.name_en || p.name,
-      name_de: p.name_de,
-      flavor: p.flavor_profile,
-      photo_url: p.photo,
-      seeds_per_tray: p.growing_procedure?.seeds_per_tray || 0,
-      yield_per_tray: p.yield_per_tray ? parseFloat(p.yield_per_tray) : 0,
-      total_growth_days: 14,
-      seeding_schedule: 'TUESDAY',
-      status: mappedStatus,
-      created_at: p.created_at,
-      updated_at: p.updated_at,
-      variants: p.available_sizes?.map((size: string) => ({
-        id: p.id + '-' + size,
-        size_name: size,
-        size_grams: parseFloat(size) || 0,
-        price_eur: p.prices?.[size] || 0,
-      })) || [],
-      growth_steps: p.growing_stages || [],
-      seed_inventory: [],
-    };
+        id: p.id,
+        name_en: p.name_en,
+        name_de: p.name_de,
+        flavor: p.flavor_profile,
+        photo_url: p.photo,
+        seeds_per_tray: p.growing_procedure?.seeds_per_tray || 0,
+        yield_per_tray: p.yield_per_tray ? parseInt(p.yield_per_tray) : 0,
+        total_growth_days: 14,
+        seeding_schedule: 'TUESDAY',
+        status: mappedStatus,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+        variants: (p.available_sizes || []).map((size: string) => ({
+          id: p.id + '-' + size,
+          size_name: size,
+          size_grams: parseInt(size) || 0,
+          price_eur: p.prices?.[size] || 0,
+        })),
+        growth_steps: p.growing_stages || [],
+        seed_inventory: [],
+      };
     });
 
     console.log('[CROPS] Returning', crops.length, 'crops');
@@ -165,24 +164,60 @@ router.post('/upload-photo/:id', upload.single('file'), async (req: Request, res
   }
 });
 
-// GET /crops/:id - Get single crop
+// GET /crops/:id - Get single crop from Supabase
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-    const crop = await prisma.crop.findUnique({
-      where: { id },
-      include: {
-        variants: true,
-        seed_inventory: true,
-        sample_inventory: true,
-        growth_steps: { orderBy: { step_order: 'asc' } },
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const anonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !anonKey) {
+      throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+    }
+
+    const fetchUrl = `${supabaseUrl}/rest/v1/products?id=eq.${id}&select=*`;
+    const response = await fetch(fetchUrl, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
       },
     });
 
-    if (!crop) {
+    if (!response.ok) {
+      throw new Error(`Supabase error: ${response.status}`);
+    }
+
+    const products = (await response.json()) as any[];
+    if (products.length === 0) {
       throw new ApiError(404, 'NOT_FOUND', `Crop with ID ${id} not found`);
     }
+
+    const p = products[0];
+    const mappedStatus = p.availability_status === 'available' ? 'active' : (p.availability_status === 'paused' ? 'paused' : 'inactive');
+
+    const crop = {
+      id: p.id,
+      name_en: p.name_en,
+      name_de: p.name_de,
+      flavor: p.flavor_profile,
+      photo_url: p.photo,
+      seeds_per_tray: p.growing_procedure?.seeds_per_tray || 0,
+      yield_per_tray: p.yield_per_tray ? parseInt(p.yield_per_tray) : 0,
+      total_growth_days: 14,
+      seeding_schedule: 'TUESDAY',
+      status: mappedStatus,
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+      variants: (p.available_sizes || []).map((size: string) => ({
+        id: p.id + '-' + size,
+        size_name: size,
+        size_grams: parseInt(size) || 0,
+        price_eur: p.prices?.[size] || 0,
+      })),
+      growth_steps: p.growing_stages || [],
+      seed_inventory: [],
+    };
 
     res.json({
       success: true,

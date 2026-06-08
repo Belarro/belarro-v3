@@ -15,3 +15,5 @@ build/
 coverage/
 
 /generated/prisma
+
+.vercel
