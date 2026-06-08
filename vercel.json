@@ -9,12 +9,6 @@
       "runtime": "nodejs20.x"
     }
   },
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@next_public_api_url",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "DATABASE_URL": "@database_url"
-  },
   "git": {
     "deploymentEnabled": {
       "main": true
