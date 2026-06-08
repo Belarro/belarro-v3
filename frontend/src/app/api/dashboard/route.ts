@@ -24,20 +24,35 @@ export async function GET(request: NextRequest) {
     const products = await response.json();
     const filtered = products.filter((p: any) => p.availability_status !== 'hidden');
 
+    const activeCrops = filtered.filter((p: any) => p.availability_status === 'available').length;
+    const totalVariants = filtered.reduce((sum: number, p: any) => sum + (p.available_sizes?.length || 0), 0);
+    const avgYield = filtered.reduce((sum: number, p: any) => sum + (p.yield_per_tray || 0), 0) / filtered.length;
+
     const dashboard = {
-      totalCrops: filtered.length,
-      activeCrops: filtered.filter((p: any) => p.availability_status === 'available').length,
-      pausedCrops: filtered.filter((p: any) => p.availability_status === 'paused').length,
-      inactiveCrops: filtered.filter((p: any) => p.availability_status === 'inactive').length,
-      totalVariants: filtered.reduce((sum: number, p: any) => sum + (p.available_sizes?.length || 0), 0),
-      avgYield: filtered.reduce((sum: number, p: any) => sum + (p.yield_per_tray || 0), 0) / filtered.length,
-      topCrops: filtered
-        .sort((a: any, b: any) => (b.yield_per_tray || 0) - (a.yield_per_tray || 0))
-        .slice(0, 5)
-        .map((p: any) => ({
-          name: p.name_en,
-          yield: p.yield_per_tray,
-        })),
+      overview: {
+        active_crops: activeCrops,
+        total_crops: filtered.length,
+        active_customers: 0,
+        total_customers: 0,
+        pending_orders: 0,
+        total_orders: 0,
+      },
+      revenue: {
+        total_order_value_eur: 0,
+      },
+      operations: {
+        active_seeding_batches: 0,
+        pending_follow_ups: 0,
+      },
+      alerts: {
+        seed_reorder_alerts: 0,
+        package_reorder_alerts: 0,
+      },
+      customer_funnel: {
+        prospects: 0,
+        active: 0,
+        conversion_rate_percent: 0,
+      },
     };
 
     return NextResponse.json({
