@@ -107,10 +107,12 @@ export default function GrowProcedurePage() {
 
   const loadAllCropStepsForCrops = async (cropsData: Crop[]) => {
     try {
+      const response = await apiClient.getGrowthSteps();
+      const allSteps = response.data || [];
+
       const stepsMap: Record<string, GrowthStep[]> = {};
       for (const crop of cropsData) {
-        const response = await apiClient.getGrowthSteps(crop.id);
-        stepsMap[crop.id] = response.data || [];
+        stepsMap[crop.id] = allSteps.filter((s: any) => s.crop_id === crop.id);
       }
       setAllCropSteps(stepsMap);
     } catch (error) {
