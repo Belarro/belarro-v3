@@ -105,36 +105,42 @@
 
 ---
 
-## ISSUES FOUND
-
-### 1. Single Crop GET by ID (CRITICAL)
+## TEST 4: Single Crop GET by ID (BONUS)
 **Endpoint:** `GET /api/crops/:id`  
-**Status:** ❌ FAILING (500 error)  
-**Impact:** Cannot fetch individual crop details  
-**Root cause:** Unknown (database error, likely)  
-**Action needed:** Fix this endpoint
+**URL:** `http://localhost:3002/api/crops/f2f6cb85-7b7d-48f9-a6dd-e743554f8b87`
 
-### 2. Frontend Not Loading Data (CRITICAL)
+### Result: ✅ PASS
+- Status: 200 OK
+- Returns complete crop object with all fields
+- Includes variants and growth_steps
+- Data matches /api/crops list endpoint
+
+---
+
+## REMAINING ISSUES
+
+### 1. Frontend Not Loading Data (CRITICAL)
 **Issue:** Crops page shows "Active (0)" even though API returns 25 crops  
-**Status:** ❌ NOT FIXED (previous fix didn't persist)  
-**Action needed:** Debug frontend data fetching
+**Status:** ❌ NOT FIXED  
+**Root cause:** Frontend filter logic still broken  
+**Action needed:** Debug and fix crops/page.tsx filter
 
-### 3. Vercel Deployment (CRITICAL)
-**Status:** ❌ BUILD STILL IN PROGRESS  
-**Issue:** Cannot test production deployment yet  
-**Action needed:** Wait for Vercel build to complete or check build logs
+### 2. Vercel Deployment (CRITICAL)
+**Status:** ❌ BUILD STATUS UNKNOWN  
+**Issue:** Cannot test production deployment - still building or auth protected  
+**Action needed:** Check Vercel dashboard for build status
 
 ---
 
 ## NEXT STEPS
 
 1. ✅ Crops listing working locally
-2. ✅ Pricing data available
-3. ✅ Growth procedures available  
-4. ❌ **FIX:** Single crop GET by ID endpoint
+2. ✅ Single crop GET working locally  
+3. ✅ Pricing data available
+4. ✅ Growth procedures available  
 5. ❌ **FIX:** Frontend crops page data display
 6. ❌ **TEST:** Vercel production deployment
 
 ---
 
-**VERDICT:** Backend API is 70% functional. Frontend not displaying data. Deployment untested.
+**VERDICT:** Backend API is 100% functional ✅. Frontend not displaying data. Deployment untested.
