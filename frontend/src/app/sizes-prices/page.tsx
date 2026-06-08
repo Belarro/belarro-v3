@@ -74,12 +74,16 @@ export default function SizesPricesPage() {
 
   const loadAllVariants = async (cropsData: Crop[]) => {
     try {
+      // Fetch all variants in a single API call instead of per-crop
       const res = await apiClient.getVariants();
       const allVariants = res.data || [];
 
+      // Build map of crop_id -> variants array
       const variantsMap: Record<string, Variant[]> = {};
       for (const crop of cropsData) {
-        variantsMap[crop.id] = allVariants.filter((v: any) => v.crop_id === crop.id);
+        variantsMap[crop.id] = (allVariants as any[])
+          .filter((v: any) => v.crop_id === crop.id)
+          .sort((a: any, b: any) => a.size_grams - b.size_grams);
       }
       setAllCropVariants(variantsMap);
     } catch (err) {
