@@ -461,8 +461,8 @@ export default function GrowProcedurePage() {
                     cover_soil: { icon: STEP_ICONS.cover_soil, label: 'Cover Soil', state: coverSoil, setState: setCoverSoil as any, unit: 'process', hasNotes: false },
                   };
                   const allSteps = Object.entries(stepMap).map(([key, data]) => ({ key, ...data }));
-                  return allSteps.map(({ key, icon, label, state, setState, unit, hasNotes, special }) => (
-                  <Card key={key} className={`flex flex-col gap-2 flex-1 min-w-50 ${state.enabled ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                  return allSteps.filter(s => s.state.enabled).map(({ key, icon, label, state, setState, unit, hasNotes, special }) => (
+                  <Card key={key} className={`flex flex-col gap-2 flex-1 min-w-50 bg-green-50 border-green-200`}>
                     <label className="flex items-center gap-2 cursor-pointer m-0">
                       <input
                         type="checkbox"
