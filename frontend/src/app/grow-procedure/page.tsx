@@ -178,7 +178,6 @@ export default function GrowProcedurePage() {
     try {
       setSaving(true);
 
-      // Delete all existing steps
       for (const step of steps) {
         await apiClient.deleteGrowthStep(selectedCropId, step.id);
       }
@@ -193,19 +192,15 @@ export default function GrowProcedurePage() {
         cover_soil: { state: coverSoil, hasNotes: false },
       };
 
-      // Build enabled steps from current state (not from enabledOrder which might be stale)
-      const enabledSteps = Object.entries(stateMap)
-        .filter(([, config]) => config.state.enabled)
-        .map(([key]) => key);
-
       const newSteps = [];
       let stepOrder = 1;
 
-      for (const stepKey of enabledSteps) {
+      for (const stepKey of enabledOrder) {
         const config = stateMap[stepKey];
         if (!config) continue;
 
         const stepState = config.state;
+        if (!stepState.enabled) continue;
 
         const stepData: any = {
           step_type: stepKey,
