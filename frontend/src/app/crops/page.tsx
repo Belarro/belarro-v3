@@ -279,6 +279,7 @@ export default function CropsPage() {
     setIsEditing(false);
     // Populate form immediately
     if (crop) {
+      console.log('Populating form for crop:', crop);
       setFormData({
         name_en: crop.name_en || '',
         name_de: crop.name_de || '',
@@ -296,6 +297,8 @@ export default function CropsPage() {
         notes: s.notes || '',
       })) || []);
       setPhotoPreview(crop.photo_url || '');
+    } else {
+      console.log('Crop not found:', cropId, 'Available crops:', crops.map(c => c.id));
     }
   };
 
