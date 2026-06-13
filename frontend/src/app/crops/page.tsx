@@ -202,11 +202,13 @@ export default function CropsPage() {
       // }
 
       for (const variant of variants) {
-        await apiClient.createVariant(crop.id, {
-          size_name: variant.size_name,
-          size_grams: parseFloat(variant.size_grams.toString()),
-          price_eur: parseFloat(variant.price_eur.toString()),
-        });
+        if (variant.size_name && variant.size_grams && variant.price_eur) {
+          await apiClient.createVariant(crop.id, {
+            size_name: variant.size_name,
+            size_grams: parseFloat(variant.size_grams.toString()),
+            price_eur: parseFloat(variant.price_eur.toString()),
+          });
+        }
       }
 
       setIsNewCrop(false);
