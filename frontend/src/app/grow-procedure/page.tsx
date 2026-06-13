@@ -552,14 +552,35 @@ export default function GrowProcedurePage() {
 
               <div className="flex gap-2 justify-end">
                 {isEditing ? (
-                  <Button
-                    onClick={handleSave}
-                    disabled={saving}
-                    variant="primary"
-                    size="md"
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </Button>
+                  <>
+                    <Button
+                      onClick={async () => {
+                        if (window.confirm('Delete all growth steps for this crop?')) {
+                          try {
+                            for (const step of steps) {
+                              await apiClient.deleteGrowthStep(selectedCropId, step.id);
+                            }
+                            addToast('All steps deleted', 'success', 2000);
+                            await loadGrowthSteps(selectedCropId);
+                          } catch (error) {
+                            addToast('Failed to delete steps', 'error');
+                          }
+                        }
+                      }}
+                      variant="secondary"
+                      size="md"
+                    >
+                      Clear All
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={saving}
+                      variant="primary"
+                      size="md"
+                    >
+                      {saving ? 'Saving...' : 'Save Notes'}
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     onClick={() => setIsEditing(true)}
