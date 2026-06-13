@@ -344,3 +344,4 @@ Proprietary - Belarro Farm Management System
 ---
 
 **Built with professional team standards. Ready for production. Let's grow.**
+# Staging environment - synced with v2 Supabase
