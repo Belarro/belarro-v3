@@ -172,49 +172,46 @@ export default function GrowProcedurePage() {
     }
   };
 
-  const handleSave = async () => {
+  const toggleStep = async (stepKey: string, enabled: boolean) => {
     if (!selectedCropId) return;
 
     try {
-      setSaving(true);
+      if (!enabled) {
+        // Delete the step from database
+        const existingStep = steps.find(s => s.step_type === stepKey);
+        if (existingStep) {
+          await apiClient.deleteGrowthStep(selectedCropId, existingStep.id);
+        }
+      } else {
+        // Add the step to database
+        const stateMap: Record<string, any> = {
+          seed: { state: seed, hasNotes: true },
+          soak: { state: soak, hasNotes: false },
+          stack: { state: stack, hasNotes: true },
+          light: { state: lightPhase, hasNotes: true },
+          humidity_dome: { state: humidityDome, hasNotes: true },
+          blackout: { state: blackoutPhase, hasNotes: true },
+          cover_soil: { state: coverSoil, hasNotes: false },
+        };
 
-      for (const step of steps) {
-        await apiClient.deleteGrowthStep(selectedCropId, step.id);
-      }
-
-      const stateMap: Record<string, any> = {
-        seed: { state: seed, hasNotes: true },
-        soak: { state: soak, hasNotes: false },
-        stack: { state: stack, hasNotes: true },
-        light: { state: lightPhase, hasNotes: true },
-        humidity_dome: { state: humidityDome, hasNotes: true },
-        blackout: { state: blackoutPhase, hasNotes: true },
-        cover_soil: { state: coverSoil, hasNotes: false },
-      };
-
-      const newSteps = [];
-      let stepOrder = 1;
-
-      for (const stepKey of enabledOrder) {
         const config = stateMap[stepKey];
-        if (!config) continue;
+        if (!config) return;
 
         const stepState = config.state;
-        if (!stepState.enabled) continue;
+        const currentOrder = steps.length + 1;
 
         const stepData: any = {
           step_type: stepKey,
-          step_order: stepOrder++,
+          step_order: currentOrder,
         };
 
         if (stepKey === 'cover_soil' || stepKey === 'seed') {
           stepData.duration_hours = null;
         } else if (stepState.duration) {
-          // Convert duration to hours (assume days except for soak which is hours)
           const durationHours = stepKey === 'soak' ? stepState.duration : (stepState.duration * 24);
           stepData.duration_hours = durationHours;
         } else {
-          continue;
+          return;
         }
 
         if (config.hasNotes && 'notes' in stepState) {
@@ -225,22 +222,32 @@ export default function GrowProcedurePage() {
           }
         }
 
-        newSteps.push(stepData);
+        await apiClient.createGrowthStep(selectedCropId, stepData);
       }
 
-      for (const step of newSteps) {
-        await apiClient.createGrowthStep(selectedCropId, step);
-      }
+      await loadGrowthSteps(selectedCropId);
+      addToast(enabled ? 'Added' : 'Removed', 'success', 2000);
+    } catch (error) {
+      console.error('Failed to toggle step:', error);
+      addToast('Failed to update step', 'error');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!selectedCropId) return;
+
+    try {
+      setSaving(true);
 
       if (cropNotes.trim()) {
         await apiClient.updateCrop(selectedCropId, { notes: cropNotes });
       }
 
-      addToast('Saved', 'success', 3000);
-      await loadGrowthSteps(selectedCropId);
+      addToast('Notes saved', 'success', 3000);
+      setIsEditing(false);
     } catch (error) {
-      console.error('Failed to save grow procedure:', error);
-      addToast('Failed to save grow procedure', 'error', 5000);
+      console.error('Failed to save notes:', error);
+      addToast('Failed to save notes', 'error', 5000);
     } finally {
       setSaving(false);
     }
@@ -465,15 +472,10 @@ export default function GrowProcedurePage() {
                     <label className="flex items-center gap-2 cursor-pointer m-0">
                       <input
                         type="checkbox"
-                        disabled={!isEditing}
                         checked={state.enabled}
                         onChange={(e) => {
                           setState({ ...state, enabled: e.target.checked });
-                          if (e.target.checked) {
-                            setEnabledOrder([...enabledOrder, key]);
-                          } else {
-                            setEnabledOrder(enabledOrder.filter(k => k !== key));
-                          }
+                          toggleStep(key, e.target.checked);
                         }}
                         className="w-4 h-4 flex-shrink-0 opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-green-500"
                       />
