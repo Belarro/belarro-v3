@@ -127,30 +127,33 @@ export default function GrowProcedurePage() {
 
       const order: string[] = [];
       const sorted = [...stepsData].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0));
+      const durationInDays = (hours: number) => Math.round(hours / 24);
 
       sorted.forEach((step: GrowthStep) => {
-        if (step.step_type === 'seed') {
+        const stepType = step.step_type?.toLowerCase().replace(/_/g, '_');
+
+        if (stepType === 'seed') {
           setSeed({ enabled: true, duration: step.duration_hours || null, notes: step.notes || '' });
           order.push('seed');
-        } else if (step.step_type === 'soak') {
+        } else if (stepType === 'soak' || stepType === 'soaking') {
           setSoak({ enabled: true, duration: step.duration_hours || null });
           order.push('soak');
-        } else if (step.step_type === 'stack') {
-          setStack({ enabled: true, duration: step.duration_hours || null });
+        } else if (stepType === 'stack' || stepType === 'stacking') {
+          setStack({ enabled: true, duration: durationInDays(step.duration_hours || 0) || null });
           order.push('stack');
-        } else if (step.step_type === 'light') {
-          setLightPhase({ enabled: true, duration: step.duration_hours || null, notes: step.notes || '' });
+        } else if (stepType === 'light' || stepType === 'under_light') {
+          setLightPhase({ enabled: true, duration: durationInDays(step.duration_hours || 0) || null, notes: step.notes || '' });
           order.push('light');
-        } else if (step.step_type === 'humidity_dome') {
+        } else if (stepType === 'humidity_dome' || stepType === 'dome') {
           const notes = step.notes || '';
           const countDays = notes.includes('[COUNT_DAYS]');
           const cleanNotes = notes.replace('[COUNT_DAYS]', '').trim();
-          setHumidityDome({ enabled: true, duration: step.duration_hours || null, notes: cleanNotes, countTowardsDays: countDays });
+          setHumidityDome({ enabled: true, duration: durationInDays(step.duration_hours || 0) || null, notes: cleanNotes, countTowardsDays: countDays });
           order.push('humidity_dome');
-        } else if (step.step_type === 'blackout') {
-          setBlackoutPhase({ enabled: true, duration: step.duration_hours || null, notes: step.notes || '' });
+        } else if (stepType === 'blackout') {
+          setBlackoutPhase({ enabled: true, duration: durationInDays(step.duration_hours || 0) || null, notes: step.notes || '' });
           order.push('blackout');
-        } else if (step.step_type === 'cover_soil') {
+        } else if (stepType === 'cover_soil') {
           setCoverSoil({ enabled: true, duration: step.duration_hours || null, notes: step.notes || '' });
           order.push('cover_soil');
         }
@@ -200,7 +203,9 @@ export default function GrowProcedurePage() {
         if (stepKey === 'cover_soil' || stepKey === 'seed') {
           stepData.duration_hours = null;
         } else if (stepState.duration) {
-          stepData.duration_hours = stepState.duration;
+          // Convert duration to hours (assume days except for soak which is hours)
+          const durationHours = stepKey === 'soak' ? stepState.duration : (stepState.duration * 24);
+          stepData.duration_hours = durationHours;
         } else {
           continue;
         }
