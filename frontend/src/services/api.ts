@@ -318,7 +318,7 @@ class ApiClient {
   }
 
   async deleteGrowthStep(cropId: string, stepId: string) {
-    return this.request<ApiResponse>(`/growth-steps/${stepId}`, {
+    return this.request<ApiResponse>(`/growth-steps?id=${stepId}`, {
       method: 'DELETE',
     });
   }
