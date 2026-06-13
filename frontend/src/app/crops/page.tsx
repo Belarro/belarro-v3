@@ -260,7 +260,7 @@ export default function CropsPage() {
     });
     try {
       const response = await apiClient.getCrop(cropId);
-      const crop = response.data;
+      const crop = Array.isArray(response.data) ? response.data[0] : response.data;
       if (crop) {
         setFormData({
           name_en: crop.name_en || '',
