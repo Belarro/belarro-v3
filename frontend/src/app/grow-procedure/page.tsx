@@ -63,6 +63,7 @@ export default function GrowProcedurePage() {
   const [allCropSteps, setAllCropSteps] = useState<Record<string, GrowthStep[]>>({});
   const [enabledOrder, setEnabledOrder] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [cropNotes, setCropNotes] = useState<string>('');
 
   useEffect(() => {
     loadCrops();
@@ -112,10 +113,16 @@ export default function GrowProcedurePage() {
 
   const loadGrowthSteps = async (cropId: string) => {
     try {
-      const response = await apiClient.getGrowthSteps(cropId);
-      const stepsData = response.data || [];
+      const [stepsResponse, cropResponse] = await Promise.all([
+        apiClient.getGrowthSteps(cropId),
+        apiClient.getCrop(cropId),
+      ]);
+      const stepsData = stepsResponse.data || [];
+      const cropData = Array.isArray(cropResponse.data) ? cropResponse.data[0] : cropResponse.data;
+
       setSteps(stepsData);
       setIsEditing(false);
+      setCropNotes(cropData?.notes || '');
 
       setSeed({ enabled: false, duration: null, notes: '' });
       setSoak({ enabled: false, duration: null });
@@ -223,6 +230,10 @@ export default function GrowProcedurePage() {
 
       for (const step of newSteps) {
         await apiClient.createGrowthStep(selectedCropId, step);
+      }
+
+      if (cropNotes.trim()) {
+        await apiClient.updateCrop(selectedCropId, { notes: cropNotes });
       }
 
       addToast('Saved', 'success', 3000);
@@ -514,25 +525,42 @@ export default function GrowProcedurePage() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-200 flex gap-2 justify-end">
-              {isEditing ? (
-                <Button
-                  onClick={handleSave}
-                  disabled={saving}
-                  variant="primary"
-                  size="md"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  variant="primary"
-                  size="md"
-                >
-                  Edit
-                </Button>
-              )}
+            <div className="p-4 border-t border-gray-200">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Crop Notes
+                </label>
+                <textarea
+                  disabled={!isEditing}
+                  value={cropNotes}
+                  onChange={(e) => setCropNotes(e.target.value)}
+                  placeholder="Add any notes about this crop..."
+                  className={`w-full p-3 border rounded text-sm min-h-20 font-inherit box-border resize-none focus:ring-2 focus:ring-green-500 ${
+                    isEditing ? 'bg-white border-gray-300' : 'bg-gray-100 border-gray-200 text-gray-600'
+                  } disabled:cursor-not-allowed`}
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                {isEditing ? (
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving}
+                    variant="primary"
+                    size="md"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => setIsEditing(true)}
+                    variant="primary"
+                    size="md"
+                  >
+                    Edit
+                  </Button>
+                )}
+              </div>
             </div>
           </Card>
         )}
