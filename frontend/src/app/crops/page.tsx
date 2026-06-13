@@ -40,6 +40,7 @@ interface Crop {
 }
 
 const STEP_TYPES = ['soak', 'seed', 'stack', 'blackout', 'humidity_dome', 'light', 'cover_soil', 'harvest'];
+// Force rebuild
 
 const getCropStatusBadgeType = (status: string): 'ok' | 'low' | 'out' | 'success' | 'warning' | 'error' => {
   switch (status) {
