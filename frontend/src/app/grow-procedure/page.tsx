@@ -107,13 +107,11 @@ export default function GrowProcedurePage() {
 
   const loadAllCropStepsForCrops = async (cropsData: Crop[]) => {
     try {
-      // Fetch all growth steps in a single API call instead of per-crop
-      const response = await apiClient.getGrowthSteps();
-      const allSteps = response.data || [];
-
-      // Build map of crop_id -> steps array, sorted by step_order
+      // Fetch growth steps for each crop
       const stepsMap: Record<string, GrowthStep[]> = {};
       for (const crop of cropsData) {
+        const response = await apiClient.getGrowthSteps(crop.id);
+        const allSteps = response.data || [];
         stepsMap[crop.id] = (allSteps as any[])
           .filter((s: any) => s.crop_id === crop.id)
           .sort((a: any, b: any) => (a.step_order ?? 0) - (b.step_order ?? 0));
