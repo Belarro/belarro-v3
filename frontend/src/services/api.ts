@@ -63,7 +63,7 @@ class ApiClient {
   }
 
   async getCrop(id: string) {
-    return this.request<ApiResponse>(`/crops/${id}`);
+    return this.request<ApiResponse>(`/crops?id=${id}`);
   }
 
   async createCrop(data: any) {
@@ -74,14 +74,14 @@ class ApiClient {
   }
 
   async updateCrop(id: string, data: any) {
-    return this.request<ApiResponse>(`/crops/${id}`, {
-      method: 'PUT',
+    return this.request<ApiResponse>(`/crops?id=${id}`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
 
   async deleteCrop(id: string) {
-    return this.request<ApiResponse>(`/crops/${id}`, {
+    return this.request<ApiResponse>(`/crops?id=${id}`, {
       method: 'DELETE',
     });
   }

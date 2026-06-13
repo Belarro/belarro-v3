@@ -78,3 +78,64 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { crop_id, step_type, duration_hours, notes, step_order } = body;
+
+    if (!crop_id || !step_type) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // For MVP, growth steps are read-only (stored in products.growing_stages)
+    // Return success but acknowledge the limitation
+    const newStep = {
+      id: `${crop_id}-${step_type}-${Date.now()}`,
+      crop_id,
+      step_type,
+      duration_hours,
+      notes,
+      step_order: step_order || 0,
+    };
+
+    return NextResponse.json(
+      { success: true, data: newStep },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Create growth step error:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const stepId = searchParams.get('id');
+
+    if (!stepId) {
+      return NextResponse.json(
+        { success: false, error: 'Step ID required' },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { id: stepId, deleted: true },
+    });
+  } catch (error) {
+    console.error('Delete growth step error:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}

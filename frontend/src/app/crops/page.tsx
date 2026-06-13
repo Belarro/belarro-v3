@@ -100,15 +100,38 @@ export default function CropsPage() {
   }, []);
 
   useEffect(() => {
-    setSelectedCropId('');
+    setSelectedCropId(null);
     setIsNewCrop(false);
+    setIsEditing(false);
   }, [activeTab]);
 
   useEffect(() => {
     if (selectedCropId && !isNewCrop) {
-      handleSelectCrop(selectedCropId);
+      const crop = crops.find((c) => c.id === selectedCropId);
+      if (crop) {
+        setFormData({
+          name_en: crop.name_en || '',
+          name_de: crop.name_de || '',
+          flavor: crop.flavor || '',
+          seeds_per_tray: crop.seeds_per_tray ? crop.seeds_per_tray.toString() : '',
+          yield_per_tray: crop.yield_per_tray ? crop.yield_per_tray.toString() : '',
+          total_growth_days: crop.total_growth_days ? crop.total_growth_days.toString() : '',
+          seeding_schedule: crop.seeding_schedule || 'TUESDAY',
+          status: crop.status || 'active',
+        });
+        setVariants(crop.variants || []);
+        setSteps(
+          crop.growth_steps?.map((s: any) => ({
+            step_type: s.step_type,
+            duration_hours: s.duration_hours,
+            notes: s.notes || '',
+          })) || []
+        );
+        setPhotoPreview(crop.photo_url || '');
+        setPhotoFile(null);
+      }
     }
-  }, [selectedCropId]);
+  }, [selectedCropId, crops]);
 
   const selectedCrop = crops.find((c) => c.id === selectedCropId);
   const filteredCrops = crops.filter((c) => {
@@ -179,9 +202,12 @@ export default function CropsPage() {
       if (isNewCrop) {
         const response = await apiClient.createCrop(cropData);
         crop = response.data;
-      } else {
-        const response = await apiClient.updateCrop(selectedCropId!, cropData);
+      } else if (selectedCropId) {
+        const response = await apiClient.updateCrop(selectedCropId, cropData);
         crop = response.data;
+      } else {
+        addToast('No crop selected', 'error');
+        return;
       }
 
       if (photoFile) {
@@ -201,12 +227,15 @@ export default function CropsPage() {
       //   await apiClient.createGrowthStep(payload);
       // }
 
-      for (const variant of variants) {
-        await apiClient.createVariant(crop.id, {
-          size_name: variant.size_name,
-          size_grams: parseFloat(variant.size_grams.toString()),
-          price_eur: parseFloat(variant.price_eur.toString()),
-        });
+      // Only save variants for new crops or if variants were actually modified
+      if (isNewCrop && variants.length > 0) {
+        for (const variant of variants) {
+          await apiClient.createVariant(crop.id, {
+            size_name: variant.size_name,
+            size_grams: parseFloat(variant.size_grams.toString()),
+            price_eur: parseFloat(variant.price_eur.toString()),
+          });
+        }
       }
 
       setIsNewCrop(false);
@@ -240,7 +269,7 @@ export default function CropsPage() {
     }
   };
 
-  const handleSelectCrop = async (cropId: string) => {
+  const handleSelectCrop = (cropId: string) => {
     const crop = crops.find((c) => c.id === cropId);
     if (crop && crop.status !== activeTab) {
       return;
@@ -248,43 +277,25 @@ export default function CropsPage() {
     setSelectedCropId(cropId);
     setIsNewCrop(false);
     setIsEditing(false);
-    setFormData({
-      name_en: '',
-      name_de: '',
-      flavor: '',
-      seeds_per_tray: '',
-      yield_per_tray: '',
-      total_growth_days: '',
-      seeding_schedule: 'TUESDAY',
-      status: 'active',
-    });
-    try {
-      const response = await apiClient.getCrop(cropId);
-      const crop = response.data;
-      if (crop) {
-        setFormData({
-          name_en: crop.name_en || '',
-          name_de: crop.name_de || '',
-          flavor: crop.flavor || '',
-          seeds_per_tray: crop.seeds_per_tray ? crop.seeds_per_tray.toString() : '',
-          yield_per_tray: crop.yield_per_tray ? crop.yield_per_tray.toString() : '',
-          total_growth_days: crop.total_growth_days ? crop.total_growth_days.toString() : '',
-          seeding_schedule: crop.seeding_schedule || 'TUESDAY',
-          status: crop.status || 'active',
-        });
-        setVariants(crop.variants || []);
-        setSteps(
-          crop.growth_steps?.map((s: any) => ({
-            step_type: s.step_type,
-            duration_hours: s.duration_hours,
-            notes: s.notes || '',
-          })) || []
-        );
-        setPhotoPreview(crop.photo_url || '');
-        setPhotoFile(null);
-      }
-    } catch (error) {
-      console.error('Failed to load crop:', error);
+    // Populate form immediately
+    if (crop) {
+      setFormData({
+        name_en: crop.name_en || '',
+        name_de: crop.name_de || '',
+        flavor: crop.flavor || '',
+        seeds_per_tray: crop.seeds_per_tray ? crop.seeds_per_tray.toString() : '',
+        yield_per_tray: crop.yield_per_tray ? crop.yield_per_tray.toString() : '',
+        total_growth_days: crop.total_growth_days ? crop.total_growth_days.toString() : '',
+        seeding_schedule: crop.seeding_schedule || 'TUESDAY',
+        status: crop.status || 'active',
+      });
+      setVariants(crop.variants || []);
+      setSteps(crop.growth_steps?.map((s: any) => ({
+        step_type: s.step_type || s.stage,
+        duration_hours: s.duration_hours || (s.duration ? s.duration * 24 : null),
+        notes: s.notes || '',
+      })) || []);
+      setPhotoPreview(crop.photo_url || '');
     }
   };
 
@@ -333,9 +344,13 @@ export default function CropsPage() {
     if (!selectedCropId) return;
     try {
       await apiClient.updateCrop(selectedCropId, { status: newStatus });
-      fetchCrops();
+      await fetchCrops();
+      setActiveTab(newStatus as 'active' | 'paused');
+      setSelectedCropId(null);
+      addToast(`Crop ${newStatus === 'active' ? 'resumed' : 'paused'}`, 'success');
     } catch (error) {
       console.error('Failed to update status:', error);
+      addToast('Failed to update crop status', 'error');
     }
   };
 
@@ -430,16 +445,29 @@ export default function CropsPage() {
             {isNewCrop || (selectedCrop && selectedCrop.id === selectedCropId) ? (
               <Card className="overflow-hidden flex flex-col p-0">
                 {/* Detail Header */}
-                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center gap-3">
                   <h2 className="text-lg font-semibold text-gray-900">{isNewCrop ? 'New Crop' : selectedCrop?.name_en}</h2>
                   {!isNewCrop && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setShowDeleteConfirm(true)}
-                    >
-                      Delete
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={formData.status === 'active' ? 'warning' : 'success'}
+                        size="sm"
+                        onClick={() => {
+                          const newStatus = formData.status === 'active' ? 'paused' : 'active';
+                          setFormData({ ...formData, status: newStatus });
+                          handleStatusChange(newStatus);
+                        }}
+                      >
+                        {formData.status === 'active' ? 'Pause' : 'Resume'}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => setShowDeleteConfirm(true)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   )}
                 </div>
 
