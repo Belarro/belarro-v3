@@ -338,36 +338,44 @@ export default function GrowProcedurePage() {
 
             <div className="flex-1 p-3 flex flex-col gap-2 overflow-hidden">
               {/* Timeline visualization - horizontal flow in order enabled */}
-              {enabledOrder.length > 0 && (
-                <div className="p-3 bg-gray-50 rounded border border-gray-200">
-                  <div className="flex items-start gap-2 overflow-x-auto">
-                    {enabledOrder.map((stepKey, idx) => {
-                      const stepConfigs: Record<string, any> = {
-                        seed: { icon: STEP_ICONS.seed, label: 'Seed', state: seed, unit: '' },
-                        soak: { icon: STEP_ICONS.soak, label: 'Soak', state: soak, unit: 'hours' },
-                        stack: { icon: STEP_ICONS.stack, label: 'Stack', state: stack, unit: 'days' },
-                        light: { icon: STEP_ICONS.light, label: 'Light', state: lightPhase, unit: 'days' },
-                        humidity_dome: { icon: STEP_ICONS.humidity_dome, label: 'Humidity Dome', state: humidityDome, unit: 'days' },
-                        blackout: { icon: STEP_ICONS.blackout, label: 'Blackout', state: blackoutPhase, unit: 'days' },
-                        cover_soil: { icon: STEP_ICONS.cover_soil, label: 'Cover Soil', state: coverSoil, unit: '' },
-                      };
-                      const config = stepConfigs[stepKey];
-                      const showDuration = stepKey === 'humidity_dome' ? config.state.countTowardsDays && config.state.duration : config.state.duration;
-                      return (
-                        <div key={stepKey} className="flex items-start gap-1 flex-shrink-0">
-                          <div className="text-center min-w-17">
-                            <div className="text-2xl leading-tight mb-1">{config.icon}</div>
-                            <div className="text-xs font-medium text-gray-900 leading-tight mb-0.5">{config.label}</div>
-                            {showDuration && <div className="text-sm font-bold text-green-600">{config.state.duration}</div>}
-                            {showDuration && config.unit && <div className="text-xs font-medium text-gray-600">{config.unit}</div>}
+              {(() => {
+                const activeSteps = enabledOrder.filter(k => {
+                  const stepMap: Record<string, any> = {
+                    seed, soak, stack, light: lightPhase, humidity_dome: humidityDome, blackout: blackoutPhase, cover_soil: coverSoil
+                  };
+                  return stepMap[k]?.enabled;
+                });
+                return activeSteps.length > 0 ? (
+                  <div className="p-3 bg-gray-50 rounded border border-gray-200">
+                    <div className="flex items-start gap-2 overflow-x-auto">
+                      {activeSteps.map((stepKey, idx) => {
+                        const stepConfigs: Record<string, any> = {
+                          seed: { icon: STEP_ICONS.seed, label: 'Seed', state: seed, unit: '' },
+                          soak: { icon: STEP_ICONS.soak, label: 'Soak', state: soak, unit: 'hours' },
+                          stack: { icon: STEP_ICONS.stack, label: 'Stack', state: stack, unit: 'days' },
+                          light: { icon: STEP_ICONS.light, label: 'Light', state: lightPhase, unit: 'days' },
+                          humidity_dome: { icon: STEP_ICONS.humidity_dome, label: 'Humidity Dome', state: humidityDome, unit: 'days' },
+                          blackout: { icon: STEP_ICONS.blackout, label: 'Blackout', state: blackoutPhase, unit: 'days' },
+                          cover_soil: { icon: STEP_ICONS.cover_soil, label: 'Cover Soil', state: coverSoil, unit: '' },
+                        };
+                        const config = stepConfigs[stepKey];
+                        const showDuration = stepKey === 'humidity_dome' ? config.state.countTowardsDays && config.state.duration : config.state.duration;
+                        return (
+                          <div key={stepKey} className="flex items-start gap-1 flex-shrink-0">
+                            <div className="text-center min-w-17">
+                              <div className="text-2xl leading-tight mb-1">{config.icon}</div>
+                              <div className="text-xs font-medium text-gray-900 leading-tight mb-0.5">{config.label}</div>
+                              {showDuration && <div className="text-sm font-bold text-green-600">{config.state.duration}</div>}
+                              {showDuration && config.unit && <div className="text-xs font-medium text-gray-600">{config.unit}</div>}
+                            </div>
+                            {idx < activeSteps.length - 1 && <div className="text-lg text-gray-300 flex-shrink-0 mt-2">→</div>}
                           </div>
-                          {idx < enabledOrder.length - 1 && <div className="text-lg text-gray-300 flex-shrink-0 mt-2">→</div>}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : null;
+              })()}
 
               {/* Old timeline code - keeping for reference but not used */}
               {false && (soak.enabled || stack.enabled || lightPhase.enabled || humidityDome.enabled || blackoutPhase.enabled || coverSoil.enabled) && (
