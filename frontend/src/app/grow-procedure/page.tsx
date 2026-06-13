@@ -63,6 +63,7 @@ export default function GrowProcedurePage() {
   const [allCropSteps, setAllCropSteps] = useState<Record<string, GrowthStep[]>>({});
   const [enabledOrder, setEnabledOrder] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [cropNotes, setCropNotes] = useState<string>('');
 
   useEffect(() => {
     loadCrops();
@@ -112,10 +113,16 @@ export default function GrowProcedurePage() {
 
   const loadGrowthSteps = async (cropId: string) => {
     try {
-      const response = await apiClient.getGrowthSteps(cropId);
-      const stepsData = response.data || [];
+      const [stepsResponse, cropResponse] = await Promise.all([
+        apiClient.getGrowthSteps(cropId),
+        apiClient.getCrop(cropId),
+      ]);
+      const stepsData = stepsResponse.data || [];
+      const cropData = Array.isArray(cropResponse.data) ? cropResponse.data[0] : cropResponse.data;
+
       setSteps(stepsData);
       setIsEditing(false);
+      setCropNotes(cropData?.notes || '');
 
       setSeed({ enabled: false, duration: null, notes: '' });
       setSoak({ enabled: false, duration: null });
@@ -165,49 +172,46 @@ export default function GrowProcedurePage() {
     }
   };
 
-  const handleSave = async () => {
+  const toggleStep = async (stepKey: string, enabled: boolean) => {
     if (!selectedCropId) return;
 
     try {
-      setSaving(true);
+      if (!enabled) {
+        // Delete the step from database
+        const existingStep = steps.find(s => s.step_type === stepKey);
+        if (existingStep) {
+          await apiClient.deleteGrowthStep(selectedCropId, existingStep.id);
+        }
+      } else {
+        // Add the step to database
+        const stateMap: Record<string, any> = {
+          seed: { state: seed, hasNotes: true },
+          soak: { state: soak, hasNotes: false },
+          stack: { state: stack, hasNotes: true },
+          light: { state: lightPhase, hasNotes: true },
+          humidity_dome: { state: humidityDome, hasNotes: true },
+          blackout: { state: blackoutPhase, hasNotes: true },
+          cover_soil: { state: coverSoil, hasNotes: false },
+        };
 
-      for (const step of steps) {
-        await apiClient.deleteGrowthStep(selectedCropId, step.id);
-      }
-
-      const stateMap: Record<string, any> = {
-        seed: { state: seed, hasNotes: true },
-        soak: { state: soak, hasNotes: false },
-        stack: { state: stack, hasNotes: true },
-        light: { state: lightPhase, hasNotes: true },
-        humidity_dome: { state: humidityDome, hasNotes: true },
-        blackout: { state: blackoutPhase, hasNotes: true },
-        cover_soil: { state: coverSoil, hasNotes: false },
-      };
-
-      const newSteps = [];
-      let stepOrder = 1;
-
-      for (const stepKey of enabledOrder) {
         const config = stateMap[stepKey];
-        if (!config) continue;
+        if (!config) return;
 
         const stepState = config.state;
-        if (!stepState.enabled) continue;
+        const currentOrder = steps.length + 1;
 
         const stepData: any = {
           step_type: stepKey,
-          step_order: stepOrder++,
+          step_order: currentOrder,
         };
 
         if (stepKey === 'cover_soil' || stepKey === 'seed') {
           stepData.duration_hours = null;
         } else if (stepState.duration) {
-          // Convert duration to hours (assume days except for soak which is hours)
           const durationHours = stepKey === 'soak' ? stepState.duration : (stepState.duration * 24);
           stepData.duration_hours = durationHours;
         } else {
-          continue;
+          return;
         }
 
         if (config.hasNotes && 'notes' in stepState) {
@@ -218,18 +222,32 @@ export default function GrowProcedurePage() {
           }
         }
 
-        newSteps.push(stepData);
+        await apiClient.createGrowthStep(selectedCropId, stepData);
       }
 
-      for (const step of newSteps) {
-        await apiClient.createGrowthStep(selectedCropId, step);
-      }
-
-      addToast('Saved', 'success', 3000);
       await loadGrowthSteps(selectedCropId);
+      addToast(enabled ? 'Added' : 'Removed', 'success', 2000);
     } catch (error) {
-      console.error('Failed to save grow procedure:', error);
-      addToast('Failed to save grow procedure', 'error', 5000);
+      console.error('Failed to toggle step:', error);
+      addToast('Failed to update step', 'error');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!selectedCropId) return;
+
+    try {
+      setSaving(true);
+
+      if (cropNotes.trim()) {
+        await apiClient.updateCrop(selectedCropId, { notes: cropNotes });
+      }
+
+      addToast('Notes saved', 'success', 3000);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to save notes:', error);
+      addToast('Failed to save notes', 'error', 5000);
     } finally {
       setSaving(false);
     }
@@ -326,31 +344,38 @@ export default function GrowProcedurePage() {
             </div>
 
             <div className="flex-1 p-3 flex flex-col gap-2 overflow-hidden">
-              {/* Timeline visualization - horizontal flow in order enabled */}
-              {enabledOrder.length > 0 && (
+              {/* Timeline visualization - shows steps from database */}
+              {steps.length > 0 && (
                 <div className="p-3 bg-gray-50 rounded border border-gray-200">
                   <div className="flex items-start gap-2 overflow-x-auto">
-                    {enabledOrder.map((stepKey, idx) => {
-                      const stepConfigs: Record<string, any> = {
-                        seed: { icon: STEP_ICONS.seed, label: 'Seed', state: seed, unit: '' },
-                        soak: { icon: STEP_ICONS.soak, label: 'Soak', state: soak, unit: 'hours' },
-                        stack: { icon: STEP_ICONS.stack, label: 'Stack', state: stack, unit: 'days' },
-                        light: { icon: STEP_ICONS.light, label: 'Light', state: lightPhase, unit: 'days' },
-                        humidity_dome: { icon: STEP_ICONS.humidity_dome, label: 'Humidity Dome', state: humidityDome, unit: 'days' },
-                        blackout: { icon: STEP_ICONS.blackout, label: 'Blackout', state: blackoutPhase, unit: 'days' },
-                        cover_soil: { icon: STEP_ICONS.cover_soil, label: 'Cover Soil', state: coverSoil, unit: '' },
+                    {[...steps].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0)).map((step, idx, sorted) => {
+                      const typeMap: Record<string, any> = {
+                        seed: { icon: STEP_ICONS.seed, label: 'Seed', unit: '' },
+                        soak: { icon: STEP_ICONS.soak, label: 'Soak', unit: 'hours' },
+                        soaking: { icon: STEP_ICONS.soak, label: 'Soak', unit: 'hours' },
+                        stack: { icon: STEP_ICONS.stack, label: 'Stack', unit: 'days' },
+                        stacking: { icon: STEP_ICONS.stack, label: 'Stack', unit: 'days' },
+                        light: { icon: STEP_ICONS.light, label: 'Light', unit: 'days' },
+                        under_light: { icon: STEP_ICONS.light, label: 'Light', unit: 'days' },
+                        humidity_dome: { icon: STEP_ICONS.humidity_dome, label: 'Humidity', unit: 'days' },
+                        dome: { icon: STEP_ICONS.humidity_dome, label: 'Humidity', unit: 'days' },
+                        blackout: { icon: STEP_ICONS.blackout, label: 'Blackout', unit: 'days' },
+                        cover_soil: { icon: STEP_ICONS.cover_soil, label: 'Cover Soil', unit: '' },
                       };
-                      const config = stepConfigs[stepKey];
-                      const showDuration = stepKey === 'humidity_dome' ? config.state.countTowardsDays && config.state.duration : config.state.duration;
+                      const type = step.step_type?.toLowerCase() || '';
+                      const config = typeMap[type];
+                      if (!config) return null;
+                      const durationInDays = (hours: number) => Math.round(hours / 24);
+                      const duration = type === 'soak' || type === 'soaking' ? step.duration_hours : (step.duration_hours ? durationInDays(step.duration_hours) : null);
                       return (
-                        <div key={stepKey} className="flex items-start gap-1 flex-shrink-0">
+                        <div key={step.id} className="flex items-start gap-1 flex-shrink-0">
                           <div className="text-center min-w-17">
                             <div className="text-2xl leading-tight mb-1">{config.icon}</div>
                             <div className="text-xs font-medium text-gray-900 leading-tight mb-0.5">{config.label}</div>
-                            {showDuration && <div className="text-sm font-bold text-green-600">{config.state.duration}</div>}
-                            {showDuration && config.unit && <div className="text-xs font-medium text-gray-600">{config.unit}</div>}
+                            {duration && <div className="text-sm font-bold text-green-600">{duration}</div>}
+                            {duration && config.unit && <div className="text-xs font-medium text-gray-600">{config.unit}</div>}
                           </div>
-                          {idx < enabledOrder.length - 1 && <div className="text-lg text-gray-300 flex-shrink-0 mt-2">→</div>}
+                          {idx < sorted.length - 1 && <div className="text-lg text-gray-300 flex-shrink-0 mt-2">→</div>}
                         </div>
                       );
                     })}
@@ -447,15 +472,10 @@ export default function GrowProcedurePage() {
                     <label className="flex items-center gap-2 cursor-pointer m-0">
                       <input
                         type="checkbox"
-                        disabled={!isEditing}
                         checked={state.enabled}
                         onChange={(e) => {
                           setState({ ...state, enabled: e.target.checked });
-                          if (e.target.checked) {
-                            setEnabledOrder([...enabledOrder, key]);
-                          } else {
-                            setEnabledOrder(enabledOrder.filter(k => k !== key));
-                          }
+                          toggleStep(key, e.target.checked);
                         }}
                         className="w-4 h-4 flex-shrink-0 opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-green-500"
                       />
@@ -514,25 +534,63 @@ export default function GrowProcedurePage() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-200 flex gap-2 justify-end">
-              {isEditing ? (
-                <Button
-                  onClick={handleSave}
-                  disabled={saving}
-                  variant="primary"
-                  size="md"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  variant="primary"
-                  size="md"
-                >
-                  Edit
-                </Button>
-              )}
+            <div className="p-4 border-t border-gray-200">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Crop Notes
+                </label>
+                <textarea
+                  disabled={!isEditing}
+                  value={cropNotes}
+                  onChange={(e) => setCropNotes(e.target.value)}
+                  placeholder="Add any notes about this crop..."
+                  className={`w-full p-3 border rounded text-sm min-h-20 font-inherit box-border resize-none focus:ring-2 focus:ring-green-500 ${
+                    isEditing ? 'bg-white border-gray-300' : 'bg-gray-100 border-gray-200 text-gray-600'
+                  } disabled:cursor-not-allowed`}
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                {isEditing ? (
+                  <>
+                    <Button
+                      onClick={async () => {
+                        if (window.confirm('Delete all growth steps for this crop?')) {
+                          try {
+                            for (const step of steps) {
+                              await apiClient.deleteGrowthStep(selectedCropId, step.id);
+                            }
+                            addToast('All steps deleted', 'success', 2000);
+                            await loadGrowthSteps(selectedCropId);
+                          } catch (error) {
+                            addToast('Failed to delete steps', 'error');
+                          }
+                        }
+                      }}
+                      variant="secondary"
+                      size="md"
+                    >
+                      Clear All
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={saving}
+                      variant="primary"
+                      size="md"
+                    >
+                      {saving ? 'Saving...' : 'Save Notes'}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={() => setIsEditing(true)}
+                    variant="primary"
+                    size="md"
+                  >
+                    Edit
+                  </Button>
+                )}
+              </div>
             </div>
           </Card>
         )}
