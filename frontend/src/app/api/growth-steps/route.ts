@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const SUPABASE_URL = 'https://qciccimnfvloklqlhvvm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjaWNjaW1uZnZsb2tscWxodnZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzU0MjAwMDAsImV4cCI6MTk5MDAwMDAwMH0.test-key-placeholder';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjaWNjaW1uZnZsb2tscWxodnZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzUyMDYsImV4cCI6MjA5NDcxMTIwNn0.nEePQfM8UsEnwhxSHZ46LX-ZrxZP_1z82baZLpgd3KQ';
 
 export async function GET(request: NextRequest) {
   try {
