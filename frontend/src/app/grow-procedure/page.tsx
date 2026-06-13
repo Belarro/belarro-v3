@@ -74,19 +74,6 @@ export default function GrowProcedurePage() {
     }
   }, [selectedCropId]);
 
-  const loadAllCropSteps = async () => {
-    try {
-      const stepsMap: Record<string, GrowthStep[]> = {};
-      for (const crop of crops) {
-        const response = await apiClient.getGrowthSteps(crop.id);
-        stepsMap[crop.id] = response.data || [];
-      }
-      setAllCropSteps(stepsMap);
-    } catch (error) {
-      console.error('Failed to load all crop steps:', error);
-    }
-  };
-
   const loadCrops = async () => {
     try {
       setLoading(true);
@@ -107,15 +94,16 @@ export default function GrowProcedurePage() {
 
   const loadAllCropStepsForCrops = async (cropsData: Crop[]) => {
     try {
-      // Fetch growth steps for each crop
+      const responses = await Promise.all(
+        cropsData.map(crop => apiClient.getGrowthSteps(crop.id))
+      );
       const stepsMap: Record<string, GrowthStep[]> = {};
-      for (const crop of cropsData) {
-        const response = await apiClient.getGrowthSteps(crop.id);
-        const allSteps = response.data || [];
+      cropsData.forEach((crop, idx) => {
+        const allSteps = responses[idx].data || [];
         stepsMap[crop.id] = (allSteps as any[])
           .filter((s: any) => s.crop_id === crop.id)
           .sort((a: any, b: any) => (a.step_order ?? 0) - (b.step_order ?? 0));
-      }
+      });
       setAllCropSteps(stepsMap);
     } catch (error) {
       console.error('Failed to load all crop steps:', error);
