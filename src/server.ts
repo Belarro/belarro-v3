@@ -51,7 +51,7 @@ app.get('/api/crops/:id', async (req, res) => {
       },
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as any[];
     if (data.length === 0) {
       return res.status(404).json({ success: false, error: 'Crop not found' });
     }
