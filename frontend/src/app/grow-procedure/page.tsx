@@ -467,34 +467,12 @@ export default function GrowProcedurePage() {
                         type="checkbox"
                         disabled={!isEditing}
                         checked={state.enabled}
-                        onChange={async (e) => {
-                          const newEnabled = e.target.checked;
-                          setState({ ...state, enabled: newEnabled });
-
-                          if (newEnabled) {
-                            // Check: add to enabled order
-                            if (!enabledOrder.includes(key)) {
-                              setEnabledOrder([...enabledOrder, key]);
-                            }
+                        onChange={(e) => {
+                          setState({ ...state, enabled: e.target.checked });
+                          if (e.target.checked) {
+                            setEnabledOrder([...enabledOrder, key]);
                           } else {
-                            // Uncheck: delete from database immediately
                             setEnabledOrder(enabledOrder.filter(k => k !== key));
-
-                            // Find and delete this step type from the database
-                            const stepToDelete = steps.find(s => {
-                              const sType = s.step_type?.toLowerCase().replace(/_/g, '_');
-                              return sType === key || sType === key.replace(/_/g, '_');
-                            });
-
-                            if (stepToDelete) {
-                              try {
-                                await apiClient.deleteGrowthStep(selectedCropId, stepToDelete.id);
-                                setSteps(steps.filter(s => s.id !== stepToDelete.id));
-                              } catch (error) {
-                                console.error('Failed to delete step:', error);
-                                addToast('Failed to delete step', 'error');
-                              }
-                            }
                           }
                         }}
                         className="w-4 h-4 flex-shrink-0 opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-green-500"
