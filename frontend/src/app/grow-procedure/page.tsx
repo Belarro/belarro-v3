@@ -277,10 +277,10 @@ export default function GrowProcedurePage() {
       if (step.step_type === 'humidity_dome') {
         const countDays = step.notes?.includes('[COUNT_DAYS]');
         if (countDays && step.duration_hours) {
-          total += step.duration_hours;
+          total += Math.round(step.duration_hours / 24);
         }
       } else if (step.step_type !== 'soak' && step.duration_hours) {
-        total += step.duration_hours;
+        total += Math.round(step.duration_hours / 24);
       }
     });
     return total;
