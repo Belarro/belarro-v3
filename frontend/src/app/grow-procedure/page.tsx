@@ -134,7 +134,6 @@ export default function GrowProcedurePage() {
 
       const order: string[] = [];
       const sorted = [...stepsData].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0));
-      const durationInDays = (hours: number) => Math.round(hours / 24);
 
       sorted.forEach((step: GrowthStep) => {
         const stepType = step.step_type?.toLowerCase().replace(/_/g, '_');
@@ -146,19 +145,19 @@ export default function GrowProcedurePage() {
           setSoak({ enabled: true, duration: step.duration_hours || null });
           order.push('soak');
         } else if (stepType === 'stack' || stepType === 'stacking') {
-          setStack({ enabled: true, duration: durationInDays(step.duration_hours || 0) || null });
+          setStack({ enabled: true, duration: step.duration_hours || null });
           order.push('stack');
         } else if (stepType === 'light' || stepType === 'under_light') {
-          setLightPhase({ enabled: true, duration: durationInDays(step.duration_hours || 0) || null, notes: step.notes || '' });
+          setLightPhase({ enabled: true, duration: step.duration_hours || null, notes: step.notes || '' });
           order.push('light');
         } else if (stepType === 'humidity_dome' || stepType === 'dome') {
           const notes = step.notes || '';
           const countDays = notes.includes('[COUNT_DAYS]');
           const cleanNotes = notes.replace('[COUNT_DAYS]', '').trim();
-          setHumidityDome({ enabled: true, duration: durationInDays(step.duration_hours || 0) || null, notes: cleanNotes, countTowardsDays: countDays });
+          setHumidityDome({ enabled: true, duration: step.duration_hours || null, notes: cleanNotes, countTowardsDays: countDays });
           order.push('humidity_dome');
         } else if (stepType === 'blackout') {
-          setBlackoutPhase({ enabled: true, duration: durationInDays(step.duration_hours || 0) || null, notes: step.notes || '' });
+          setBlackoutPhase({ enabled: true, duration: step.duration_hours || null, notes: step.notes || '' });
           order.push('blackout');
         } else if (stepType === 'cover_soil') {
           setCoverSoil({ enabled: true, duration: step.duration_hours || null, notes: step.notes || '' });
@@ -213,9 +212,7 @@ export default function GrowProcedurePage() {
         if (stepKey === 'cover_soil' || stepKey === 'seed') {
           stepData.duration_hours = null;
         } else if (stepState.duration) {
-          // Convert duration to hours (assume days except for soak which is hours)
-          const durationHours = stepKey === 'soak' ? stepState.duration : (stepState.duration * 24);
-          stepData.duration_hours = durationHours;
+          stepData.duration_hours = stepState.duration;
         } else {
           continue;
         }
@@ -274,17 +271,15 @@ export default function GrowProcedurePage() {
     }
     let total = 0;
     cropSteps.forEach(step => {
-      console.log(`[getTotalGrowthDays] ${cropId}: step_type=${step.step_type}, duration_hours=${step.duration_hours}`);
       if (step.step_type === 'humidity_dome') {
         const countDays = step.notes?.includes('[COUNT_DAYS]');
         if (countDays && step.duration_hours) {
-          total += Math.round(step.duration_hours / 24);
+          total += step.duration_hours;
         }
       } else if (step.step_type !== 'soak' && step.duration_hours) {
-        total += Math.round(step.duration_hours / 24);
+        total += step.duration_hours;
       }
     });
-    console.log(`[getTotalGrowthDays] ${cropId}: final total = ${total}`);
     return total;
   };
 
