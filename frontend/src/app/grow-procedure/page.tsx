@@ -72,6 +72,8 @@ export default function GrowProcedurePage() {
   useEffect(() => {
     if (selectedCropId) {
       loadGrowthSteps(selectedCropId);
+      // Also refresh allCropSteps when crop changes
+      loadAllCropStepsForCrops(crops);
     }
   }, [selectedCropId]);
 
@@ -265,20 +267,18 @@ export default function GrowProcedurePage() {
       }
       return total;
     }
-    const cropSteps = allCropSteps[cropId] || [];
-    if (cropSteps.length === 0) {
-      const crop = crops.find((c) => c.id === cropId);
-      return crop?.total_growth_days || 0;
+    const crop = crops.find((c) => c.id === cropId);
+    if (!crop) return 0;
+    if (!crop.growth_steps || crop.growth_steps.length === 0) {
+      return crop.total_growth_days || 0;
     }
     let total = 0;
-    cropSteps.forEach(step => {
-      if (step.step_type === 'humidity_dome') {
-        const countDays = step.notes?.includes('[COUNT_DAYS]');
-        if (countDays && step.duration_hours) {
-          total += step.duration_hours;
-        }
-      } else if (step.step_type !== 'soak' && step.duration_hours) {
-        total += step.duration_hours;
+    (crop.growth_steps as any[]).forEach((step: any) => {
+      if (step.stage === 'soaking' || step.stage === 'dome') {
+        return;
+      }
+      if (step.unit === 'days' && step.duration) {
+        total += step.duration;
       }
     });
     return total;
