@@ -268,22 +268,9 @@ export default function GrowProcedurePage() {
       }
       return total;
     }
-    const crop = crops.find((c) => c.id === cropId) as any;
+    const crop = crops.find((c) => c.id === cropId);
     if (!crop) return 0;
-    const growthSteps = crop.growth_steps || [];
-    if (growthSteps.length === 0) {
-      return crop.total_growth_days || 0;
-    }
-    let total = 0;
-    growthSteps.forEach((step: any) => {
-      if (step.stage === 'soaking' || step.stage === 'dome') {
-        return;
-      }
-      if (step.unit === 'days' && step.duration) {
-        total += step.duration;
-      }
-    });
-    return total;
+    return crop.total_growth_days || 0;
   };
 
   return (
