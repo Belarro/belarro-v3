@@ -274,6 +274,7 @@ export default function GrowProcedurePage() {
     }
     let total = 0;
     cropSteps.forEach(step => {
+      console.log(`[getTotalGrowthDays] ${cropId}: step_type=${step.step_type}, duration_hours=${step.duration_hours}`);
       if (step.step_type === 'humidity_dome') {
         const countDays = step.notes?.includes('[COUNT_DAYS]');
         if (countDays && step.duration_hours) {
@@ -283,6 +284,7 @@ export default function GrowProcedurePage() {
         total += Math.round(step.duration_hours / 24);
       }
     });
+    console.log(`[getTotalGrowthDays] ${cropId}: final total = ${total}`);
     return total;
   };
 
