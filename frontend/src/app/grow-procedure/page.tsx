@@ -16,6 +16,7 @@ interface Crop {
   photo_url?: string;
   status: string;
   total_growth_days?: number;
+  growth_steps?: Array<{ stage: string; unit: string; duration: number }>;
 }
 
 interface GrowthStep {
