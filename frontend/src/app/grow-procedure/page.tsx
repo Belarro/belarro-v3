@@ -121,6 +121,7 @@ export default function GrowProcedurePage() {
       const cropData = Array.isArray(cropResponse.data) ? cropResponse.data[0] : cropResponse.data;
 
       setSteps(stepsData);
+      setAllCropSteps(prev => ({ ...prev, [cropId]: stepsData }));
       setIsEditing(false);
       setCropNotes(cropData?.notes || '');
 
