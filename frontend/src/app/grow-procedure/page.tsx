@@ -227,7 +227,7 @@ export default function GrowProcedurePage() {
 
   return (
     <Layout>
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="grid grid-cols-[400px_1fr] gap-6 h-[calc(100vh-280px)]">
         {/* Left sidebar: Crop list */}
         <Card className="overflow-hidden p-0 flex flex-col">
