@@ -268,9 +268,16 @@ export default function GrowProcedurePage() {
       }
       return Math.round(total / 24);
     }
-    const crop = crops.find((c) => c.id === cropId);
-    if (!crop) return 0;
-    return Math.round((crop.total_growth_days || 0) / 24);
+
+    // For non-selected crops, calculate from allCropSteps
+    const cropSteps = allCropSteps[cropId] || [];
+    let totalHours = 0;
+    cropSteps.forEach((step: GrowthStep) => {
+      if (step.step_type?.toLowerCase() !== 'seed') {
+        totalHours += (step.duration_hours || 0);
+      }
+    });
+    return Math.round(totalHours / 24);
   };
 
   return (
