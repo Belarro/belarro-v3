@@ -198,10 +198,8 @@ export default function GrowProcedurePage() {
       const newSteps = [];
       let stepOrder = 1;
 
-      // Use the actual enabled state, not enabledOrder which can be stale
-      const orderedStepKeys = ['seed', 'soak', 'stack', 'light', 'humidity_dome', 'blackout', 'cover_soil'];
-
-      for (const stepKey of orderedStepKeys) {
+      // Use enabledOrder which tracks the actual order user clicked checkboxes
+      for (const stepKey of enabledOrder) {
         const config = stateMap[stepKey];
         if (!config) continue;
 
