@@ -254,6 +254,116 @@ app.delete('/api/variants/:id', async (req, res) => {
   }
 });
 
+// ============ GROWTH STEPS API ============
+
+// POST to create growth step
+app.post('/api/growth-steps', async (req, res) => {
+  try {
+    const { crop_id, step_type, duration_hours, step_order, notes } = req.body;
+
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/belarro_v3_growth_step`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify({
+        crop_id,
+        step_type,
+        duration_hours: duration_hours || null,
+        step_order: step_order || 1,
+        notes: notes || null,
+      }),
+    });
+
+    const data = await response.json();
+    res.status(201).json({ success: true, data: Array.isArray(data) ? data[0] : data });
+  } catch (error: any) {
+    console.error('Error creating growth step:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT to update growth step
+app.put('/api/growth-steps/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { step_order, step_type, duration_hours, notes } = req.body;
+
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/belarro_v3_growth_step?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify({
+        ...(step_order !== undefined && { step_order }),
+        ...(step_type && { step_type }),
+        ...(duration_hours !== undefined && { duration_hours: duration_hours || null }),
+        ...(notes !== undefined && { notes: notes || null }),
+      }),
+    });
+
+    const data = await response.json();
+    res.json({ success: true, data: Array.isArray(data) ? data[0] : data });
+  } catch (error: any) {
+    console.error('Error updating growth step:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE single growth step
+app.delete('/api/growth-steps/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/belarro_v3_growth_step?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(404).json({ success: false, error: 'Growth step not found' });
+    }
+
+    res.json({ success: true, data: { id, deleted: true } });
+  } catch (error: any) {
+    console.error('Error deleting growth step:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST nuke-all: Delete ALL growth steps
+app.post('/api/growth-steps/nuke-all', async (req, res) => {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/belarro_v3_growth_step`, {
+      method: 'DELETE',
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Supabase delete error:', error);
+      return res.status(500).json({ success: false, error });
+    }
+
+    res.json({ success: true, message: 'Deleted all growth steps', data: { deletedCount: 'unknown' } });
+  } catch (error: any) {
+    console.error('[nuke-all] ERROR:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);
