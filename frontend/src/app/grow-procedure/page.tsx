@@ -269,11 +269,13 @@ export default function GrowProcedurePage() {
       return Math.round(total / 24);
     }
 
-    // For non-selected crops, calculate from allCropSteps
+    // For non-selected crops, calculate from allCropSteps (same logic as selected: stack + light + blackout + coverSoil)
     const cropSteps = allCropSteps[cropId] || [];
     let totalHours = 0;
     cropSteps.forEach((step: GrowthStep) => {
-      if (step.step_type?.toLowerCase() !== 'seed') {
+      const type = step.step_type?.toLowerCase() || '';
+      // Include only: stack, light, blackout, cover_soil (same as selected crop calculation)
+      if (['stack', 'stacking', 'light', 'under_light', 'blackout', 'cover_soil'].includes(type)) {
         totalHours += (step.duration_hours || 0);
       }
     });
