@@ -198,6 +198,26 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /growth-steps/cleanup/all - Delete ALL growth steps for all crops (DESTRUCTIVE)
+router.delete('/cleanup/all', async (req: Request, res: Response) => {
+  try {
+    const deleted = await prisma.growthStep.deleteMany({});
+
+    return res.json({
+      success: true,
+      message: `Deleted ${deleted.count} growth steps from all crops`,
+      data: { deletedCount: deleted.count },
+    });
+  } catch (error) {
+    console.error('[DELETE cleanup/all] ERROR:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 // DELETE /growth-steps/cleanup/corrupted - Clear corrupted growth steps for specific crops
 router.delete('/cleanup/corrupted', async (req: Request, res: Response) => {
   try {
