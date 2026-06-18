@@ -198,6 +198,38 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /growth-steps/cleanup/corrupted - Clear corrupted growth steps for specific crops
+router.delete('/cleanup/corrupted', async (req: Request, res: Response) => {
+  try {
+    const corruptedCropIds = [
+      'f2f6cb85-7b7d-48f9-a6dd-e743554f8b87', // Pea Shoots
+      'b6270fdc-ee3b-4158-84a7-18bfe1f6ee72', // Pea Salad
+      'a7dc82c6-88b3-42cc-a752-b9b82879fd69', // Sunflower
+      '92465990-4e30-4063-b8b8-60bae67a6709', // Popcorn
+      '3311da0b-7298-4cd9-b148-d3bf55854eb7', // Wheatgrass
+    ];
+
+    const deleted = await prisma.growthStep.deleteMany({
+      where: {
+        crop_id: { in: corruptedCropIds },
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: `Deleted ${deleted.count} corrupted growth steps`,
+      data: { deletedCount: deleted.count },
+    });
+  } catch (error) {
+    console.error('[DELETE cleanup] ERROR:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 // DELETE /growth-steps/:id - Delete a growth step
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
