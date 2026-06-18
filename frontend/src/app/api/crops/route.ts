@@ -1,34 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gcgscmtjesyiziebutzw.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjZ3NjbXRqZXN5aXppZWJ1dHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNDQwMjgsImV4cCI6MjA4NTYyMDAyOH0.Ikf7mpFUKPJx9wA827xHTxSV2u5JpWCPw7j6wiKbgN0';
-
-function mapProduct(p: any) {
-  const procedure = typeof p.growing_procedure === 'string' ? JSON.parse(p.growing_procedure) : p.growing_procedure || {};
-
-  return {
-    id: p.id,
-    name_en: p.name_en,
-    name_de: p.name_de,
-    flavor: p.flavor_profile,
-    photo_url: p.photo,
-    seeds_per_tray: p.seeds_per_tray || procedure.seeds_per_tray || 0,
-    yield_per_tray: p.yield_per_tray ? parseInt(p.yield_per_tray) : (procedure.yield_per_tray || 0),
-    total_growth_days: procedure.total_growth_days || 14,
-    seeding_schedule: procedure.seeding_schedule || 'TUESDAY',
-    status: p.availability_status === 'available' ? 'active' : (p.availability_status === 'paused' ? 'paused' : 'inactive'),
-    created_at: p.created_at,
-    updated_at: p.updated_at,
-    variants: (p.available_sizes || []).map((size: string) => ({
-      id: p.id + '-' + size,
-      size_name: size,
-      size_grams: parseInt(size) || 0,
-      price_eur: p.prices?.[size] || 0,
-    })),
-    growth_steps: p.growing_stages || [],
-    seed_inventory: [],
-  };
-}
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,67 +7,39 @@ export async function GET(request: NextRequest) {
     const cropId = searchParams.get('id');
 
     if (cropId) {
-      const fetchUrl = `${SUPABASE_URL}/rest/v1/products?id=eq.${cropId}&select=*`;
-      const response = await fetch(fetchUrl, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      });
+      const { data: crop, error } = await supabaseAdmin
+        .from('belarro_v3_crop')
+        .select('*, growth_procedure:belarro_v3_growth_procedure(*), variants:belarro_v3_product_variant(*)')
+        .eq('id', cropId)
+        .is('deleted_at', null)
+        .single();
 
-      if (!response.ok) {
+      if (error || !crop) {
         return NextResponse.json(
-          { success: false, error: 'Failed to fetch crop' },
+          { success: false, error: error?.message || 'Crop not found' },
           { status: 404 }
         );
       }
 
-      const products = await response.json();
-      if (products.length === 0) {
-        return NextResponse.json(
-          { success: false, error: 'Crop not found' },
-          { status: 404 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: mapProduct(products[0]),
-      });
+      return NextResponse.json({ success: true, data: crop });
     }
 
-    const fetchUrl = `${SUPABASE_URL}/rest/v1/products?select=*&order=sort_order`;
-    const response = await fetch(fetchUrl, {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-    });
+    const { data: crops, error } = await supabaseAdmin
+      .from('belarro_v3_crop')
+      .select('*, growth_procedure:belarro_v3_growth_procedure(*), variants:belarro_v3_product_variant(*)')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
-    if (!response.ok) {
-      const error = await response.text();
+    if (error) {
       return NextResponse.json(
-        { success: false, error: `Supabase error: ${response.status} - ${error}` },
-        { status: response.status }
+        { success: false, error: error.message },
+        { status: 500 }
       );
     }
 
-    const products = await response.json();
-    const filtered = products.filter((p: any) => p.availability_status !== 'hidden');
-    const crops = filtered.map(mapProduct);
-
-    return NextResponse.json({
-      success: true,
-      data: crops,
-      pagination: {
-        page: 1,
-        limit: crops.length,
-        total: crops.length,
-        pages: 1,
-      },
-    });
+    return NextResponse.json({ success: true, data: crops || [] });
   } catch (error) {
-    console.error('Crops API error:', error);
+    console.error('Crops API GET error:', error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -104,111 +47,251 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const cropId = searchParams.get('id');
+    const body = await request.json();
+    const { name_en, name_de, flavor, status, growth_procedure, variants } = body;
 
-    if (!cropId) {
+    if (!name_en || !name_de) {
       return NextResponse.json(
-        { success: false, error: 'Crop ID required' },
+        { success: false, error: 'name_en and name_de are required' },
         { status: 400 }
       );
     }
 
-    const body = await request.json();
-    const { name_en, name_de, flavor, seeds_per_tray, yield_per_tray, total_growth_days, seeding_schedule, status } = body;
+    // Create crop
+    const { data: crop, error: cropError } = await supabaseAdmin
+      .from('belarro_v3_crop')
+      .insert([
+        {
+          name_en,
+          name_de,
+          flavor: flavor || null,
+          status: status || 'active',
+        },
+      ])
+      .select()
+      .single();
 
-    // Fetch current product to get existing growing_procedure
-    const getCurrentUrl = `${SUPABASE_URL}/rest/v1/products?id=eq.${cropId}&select=growing_procedure`;
-    const getCurrentRes = await fetch(getCurrentUrl, {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-    });
+    if (cropError || !crop) {
+      return NextResponse.json(
+        { success: false, error: cropError?.message || 'Failed to create crop' },
+        { status: 500 }
+      );
+    }
 
-    let currentProcedure: Record<string, any> = {};
-    if (getCurrentRes.ok) {
-      const currentData = await getCurrentRes.json();
-      if (currentData.length > 0) {
-        const data = currentData[0];
-        currentProcedure = typeof data.growing_procedure === 'string'
-          ? JSON.parse(data.growing_procedure)
-          : data.growing_procedure || {};
+    // Create growth procedure if provided
+    if (growth_procedure) {
+      const { error: procError } = await supabaseAdmin
+        .from('belarro_v3_growth_procedure')
+        .insert([
+          {
+            crop_id: crop.id,
+            soak_enabled: growth_procedure.soak_enabled || false,
+            soak_hours: growth_procedure.soak_hours || null,
+            cover_soil_enabled: growth_procedure.cover_soil_enabled || false,
+            stack_enabled: growth_procedure.stack_enabled || false,
+            stack_days: growth_procedure.stack_days || null,
+            growth_env_type: growth_procedure.growth_env_type || 'light',
+            growth_env_days: growth_procedure.growth_env_days || 0,
+            humidity_dome_enabled: growth_procedure.humidity_dome_enabled || false,
+          },
+        ]);
+
+      if (procError) {
+        console.error('Growth procedure error:', procError);
       }
     }
 
-    const updatePayload: Record<string, any> = {};
+    // Create variants if provided
+    if (variants && Array.isArray(variants) && variants.length > 0) {
+      const variantRecords = variants
+        .filter(v => v.size_name && v.size_grams && v.price_eur)
+        .map(v => ({
+          crop_id: crop.id,
+          size_name: v.size_name,
+          size_grams: v.size_grams,
+          price_eur: v.price_eur,
+        }));
 
-    if (name_en !== undefined) updatePayload.name_en = name_en;
-    if (name_de !== undefined) updatePayload.name_de = name_de;
-    if (flavor !== undefined) updatePayload.flavor_profile = flavor;
-    if (yield_per_tray !== undefined) updatePayload.yield_per_tray = yield_per_tray?.toString();
-    if (status !== undefined) {
-      const statusMap: Record<string, string> = {
-        active: 'available',
-        paused: 'paused',
-        inactive: 'hidden',
-      };
-      updatePayload.availability_status = statusMap[status] || status;
+      if (variantRecords.length > 0) {
+        const { error: varError } = await supabaseAdmin
+          .from('belarro_v3_product_variant')
+          .insert(variantRecords);
+
+        if (varError) {
+          console.error('Variants error:', varError);
+        }
+      }
     }
 
-    // Merge procedure fields
-    const procedureUpdates: Record<string, any> = {};
-    if (seeds_per_tray !== undefined) procedureUpdates.seeds_per_tray = parseFloat(seeds_per_tray as string);
-    if (total_growth_days !== undefined) procedureUpdates.total_growth_days = parseInt(total_growth_days as string);
-    if (seeding_schedule !== undefined) procedureUpdates.seeding_schedule = seeding_schedule;
+    // Fetch full crop with relations
+    const { data: fullCrop, error: fetchError } = await supabaseAdmin
+      .from('belarro_v3_crop')
+      .select('*, growth_procedure:belarro_v3_growth_procedure(*), variants:belarro_v3_product_variant(*)')
+      .eq('id', crop.id)
+      .single();
 
-    if (Object.keys(procedureUpdates).length > 0) {
-      updatePayload.growing_procedure = { ...currentProcedure, ...procedureUpdates };
+    if (fetchError || !fullCrop) {
+      return NextResponse.json({ success: true, data: crop }, { status: 201 });
     }
 
-    console.log('Update payload:', updatePayload, 'Body:', body);
+    return NextResponse.json({ success: true, data: fullCrop }, { status: 201 });
+  } catch (error) {
+    console.error('Crops API POST error:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
 
-    if (Object.keys(updatePayload).length === 0) {
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, name_en, name_de, flavor, status, growth_procedure, variants } = body;
+
+    if (!id) {
       return NextResponse.json(
-        { success: false, error: 'No fields to update' },
+        { success: false, error: 'id is required' },
         { status: 400 }
       );
     }
 
-    const fetchUrl = `${SUPABASE_URL}/rest/v1/products?id=eq.${cropId}`;
+    // Update crop basics
+    const updateData: any = {};
+    if (name_en) updateData.name_en = name_en;
+    if (name_de) updateData.name_de = name_de;
+    if (flavor !== undefined) updateData.flavor = flavor;
+    if (status) updateData.status = status;
 
-    const response = await fetch(fetchUrl, {
-      method: 'PATCH',
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation',
-      },
-      body: JSON.stringify(updatePayload),
-    });
+    const { error: updateError } = await supabaseAdmin
+      .from('belarro_v3_crop')
+      .update(updateData)
+      .eq('id', id);
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Supabase update error:', error, 'Payload:', updatePayload);
+    if (updateError) {
       return NextResponse.json(
-        { success: false, error: `Failed to update: ${error}` },
-        { status: response.status }
+        { success: false, error: updateError.message },
+        { status: 500 }
       );
     }
 
-    const products = await response.json();
-    if (!products || products.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Crop not found after update' },
-        { status: 404 }
-      );
+    // Update or create growth procedure
+    if (growth_procedure) {
+      const { data: existing } = await supabaseAdmin
+        .from('belarro_v3_growth_procedure')
+        .select()
+        .eq('crop_id', id)
+        .single();
+
+      if (existing) {
+        await supabaseAdmin
+          .from('belarro_v3_growth_procedure')
+          .update({
+            soak_enabled: growth_procedure.soak_enabled || false,
+            soak_hours: growth_procedure.soak_hours || null,
+            cover_soil_enabled: growth_procedure.cover_soil_enabled || false,
+            stack_enabled: growth_procedure.stack_enabled || false,
+            stack_days: growth_procedure.stack_days || null,
+            growth_env_type: growth_procedure.growth_env_type || 'light',
+            growth_env_days: growth_procedure.growth_env_days || 0,
+            humidity_dome_enabled: growth_procedure.humidity_dome_enabled || false,
+          })
+          .eq('crop_id', id);
+      } else {
+        await supabaseAdmin
+          .from('belarro_v3_growth_procedure')
+          .insert([
+            {
+              crop_id: id,
+              soak_enabled: growth_procedure.soak_enabled || false,
+              soak_hours: growth_procedure.soak_hours || null,
+              cover_soil_enabled: growth_procedure.cover_soil_enabled || false,
+              stack_enabled: growth_procedure.stack_enabled || false,
+              stack_days: growth_procedure.stack_days || null,
+              growth_env_type: growth_procedure.growth_env_type || 'light',
+              growth_env_days: growth_procedure.growth_env_days || 0,
+              humidity_dome_enabled: growth_procedure.humidity_dome_enabled || false,
+            },
+          ]);
+      }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: mapProduct(Array.isArray(products) ? products[0] : products),
-    });
+    // Update variants (delete old, create new)
+    if (variants && Array.isArray(variants)) {
+      await supabaseAdmin
+        .from('belarro_v3_product_variant')
+        .delete()
+        .eq('crop_id', id);
+
+      if (variants.length > 0) {
+        const variantRecords = variants
+          .filter(v => v.size_name && v.size_grams && v.price_eur)
+          .map(v => ({
+            crop_id: id,
+            size_name: v.size_name,
+            size_grams: v.size_grams,
+            price_eur: v.price_eur,
+          }));
+
+        if (variantRecords.length > 0) {
+          await supabaseAdmin
+            .from('belarro_v3_product_variant')
+            .insert(variantRecords);
+        }
+      }
+    }
+
+    // Fetch full crop with relations
+    const { data: fullCrop, error: fetchError } = await supabaseAdmin
+      .from('belarro_v3_crop')
+      .select('*, growth_procedure:belarro_v3_growth_procedure(*), variants:belarro_v3_product_variant(*)')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !fullCrop) {
+      return NextResponse.json({ success: true, data: { id } });
+    }
+
+    return NextResponse.json({ success: true, data: fullCrop });
   } catch (error) {
-    console.error('Crops update error:', error);
+    console.error('Crops API PUT error:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'id is required' },
+        { status: 400 }
+      );
+    }
+
+    // Soft delete
+    const { error } = await supabaseAdmin
+      .from('belarro_v3_crop')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: { id } });
+  } catch (error) {
+    console.error('Crops API DELETE error:', error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

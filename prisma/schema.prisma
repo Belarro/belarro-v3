@@ -1,4 +1,4 @@
-// Belarro v3 — Farm Management System
+// Belarro v3 — Farm Management System (CLEAN REBUILD)
 // Database Schema (Prisma ORM) — Mapped to Supabase PostgreSQL
 
 generator client {
@@ -11,471 +11,102 @@ datasource db {
 }
 
 // ============================================
-// CROPS & PRODUCTS
+// CROPS (THE CORE)
 // ============================================
 
 model Crop {
-  id                  String   @id @default(cuid())
-  name_en             String
-  name_de             String
-  photo_url           String?
-  flavor              String?
-  flavor_de           String?
-  seeds_per_tray      Float    // grams
-  yield_per_tray      Float    // grams
-  total_growth_days   Int
-  seeding_schedule    String   // "TUESDAY" | "FRIDAY"
-  status              String   @default("active") // "active" | "paused" | "inactive"
+  id                String   @id @default(cuid())
+  name_en           String
+  name_de           String
+  flavor            String?
+  status            String   @default("active") // "active" | "paused"
 
   // Relations
-  variants            ProductVariant[]
-  seed_inventory      SeedInventory?
-  seeding_batches     SeedingBatch[]
-  sample_inventory    SampleInventory?
-  seed_usage_logs     SeedUsageLog[]
-  growth_steps        GrowthStep[]
+  growth_procedure  GrowthProcedure?
+  variants          ProductVariant[]
 
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
-  deleted_at          DateTime? // Soft delete timestamp
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  deleted_at        DateTime? // Soft delete
 
   @@map("belarro_v3_crop")
   @@index([status])
   @@index([deleted_at])
 }
 
-model ProductVariant {
+// ============================================
+// GROWTH PROCEDURE (LINEAR SEQUENCE PER CROP)
+// ============================================
+
+model GrowthProcedure {
   id                      String   @id @default(cuid())
-  crop_id                 String
-  size_name               String    // "Container 30g", "100g", etc.
-  size_grams              Float
-  price_eur               Float
-  container_qty           Int?
+  crop_id                 String   @unique
+
+  // Linear sequence
+  soak_enabled            Boolean  @default(false)
+  soak_hours              Int?     // If soak_enabled, required
+
+  // Seed is always present, no options
+
+  cover_soil_enabled      Boolean  @default(false)
+
+  stack_enabled           Boolean  @default(false)
+  stack_days              Int?     // If stack_enabled, required
+
+  // Growth environment (mutually exclusive)
+  growth_env_type         String   // "blackout" | "light" | "humidity_dome"
+  growth_env_days         Int      // Duration of growth environment
+
+  // Light + Humidity Dome variant (concurrent, not sequential)
+  humidity_dome_enabled   Boolean  @default(false) // Only if growth_env_type is "light"
 
   // Relations
   crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
-  orders                  Order[]
-  package_inventory       PackageInventory?
-  standing_order_items    StandingOrderItem[]
 
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
+
+  @@map("belarro_v3_growth_procedure")
+}
+
+// ============================================
+// PRODUCT VARIANTS (SIZES & PRICES)
+// ============================================
+
+model ProductVariant {
+  id                String   @id @default(cuid())
+  crop_id           String
+  size_name         String   // "100g", "225g", "450g", "Container"
+  size_grams        Float    // Actual grams (for Container: 30g internal value)
+  price_eur         Float
+
+  // Relations
+  crop              Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
+
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
   @@map("belarro_v3_product_variant")
   @@index([crop_id])
-}
-
-model SizeTemplate {
-  id                  String   @id @default(cuid())
-  size_name           String   @unique  // "100g", "225g", "450g"
-  size_grams          Float
-  price_eur           Float
-  description         String?
-
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
-
-  @@map("belarro_v3_size_template")
+  @@unique([crop_id, size_name]) // One size per crop
 }
 
 // ============================================
-// INVENTORY
-// ============================================
-
-model SeedInventory {
-  id                      String   @id @default(cuid())
-  crop_id                 String   @unique
-  quantity_grams          Float    @default(0)
-  reorder_threshold_trays Int      @default(20)
-  last_purchase_date      DateTime?
-  last_purchase_qty_grams Float?
-
-  // Relations
-  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_seed_inventory")
-}
-
-model PackageInventory {
-  id                      String   @id @default(cuid())
-  variant_id              String   @unique
-  quantity_available      Int      @default(0)
-  reorder_threshold       Int      @default(20)
-
-  // Relations
-  variant                 ProductVariant @relation(fields: [variant_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_package_inventory")
-}
-
-model SampleInventory {
-  id                      String   @id @default(cuid())
-  crop_id                 String   @unique
-  available_grams         Float    @default(0)
-
-  // Relations
-  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_sample_inventory")
-}
-
-// ============================================
-// CUSTOMERS & RELATIONSHIPS
-// ============================================
-
-model Customer {
-  id                      String   @id @default(cuid())
-  name                    String
-  restaurant_name         String?
-  contact_person          String?
-  address                 String?
-  city                    String?
-  email                   String?
-  whatsapp                String?
-  phone                   String?
-  status                  String   @default("prospect") // "prospect" | "active" | "paused" | "inactive"
-  net_days                Int      @default(30)
-  first_contact_date      DateTime @default(now())
-
-  // Relations
-  orders                  Order[]
-  visits                  Visit[]
-  follow_ups              FollowUp[]
-  invoices                Invoice[]
-  standing_orders         StandingOrder[]
-  sales_visits            SalesVisit[]
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_customer")
-  @@index([status])
-  @@index([email])
-}
-
-model Visit {
-  id                      String   @id @default(cuid())
-  customer_id             String
-  visit_date              DateTime
-  notes                   String?
-
-  // Relations
-  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_visit")
-  @@index([customer_id])
-}
-
-model FollowUp {
-  id                      String   @id @default(cuid())
-  customer_id             String
-  follow_up_number        Int      // 1, 2, 3, 4, 5
-  follow_up_days          Int      // offset from first_contact_date
-  due_date                DateTime
-  status                  String   @default("pending") // "pending" | "sent" | "completed"
-  sent_via                String?  // "whatsapp" | "email" | "call" | "visit"
-  sent_date               DateTime?
-  notes                   String?
-
-  // Relations
-  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_follow_up")
-  @@index([customer_id])
-  @@index([status])
-  @@index([due_date])
-}
-
-// ============================================
-// ORDERS & FULFILLMENT
-// ============================================
-
-model Order {
-  id                      String   @id @default(cuid())
-  customer_id             String
-  product_variant_id      String
-  quantity                Float    // qty of variant
-  order_date              DateTime
-  next_delivery_date      DateTime?
-  expected_harvest_date   DateTime?
-  status                  String   @default("pending_seed") // "pending_seed" | "growing" | "ready_harvest" | "packed" | "delivered" | "partial_delivery" | "cancelled"
-  recurring               Boolean  @default(true)
-
-  // Relations
-  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  variant                 ProductVariant @relation(fields: [product_variant_id], references: [id], onDelete: Cascade)
-  fulfillments            OrderFulfillment[]
-  messages                Message[]
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_order")
-  @@index([customer_id])
-  @@index([status])
-  @@index([product_variant_id])
-}
-
-// ============================================
-// SEEDING & HARVESTING
-// ============================================
-
-model SeedingBatch {
-  id                      String   @id @default(cuid())
-  crop_id                 String
-  seeding_date            DateTime
-  quantity_trays          Int
-  batch_type              String   // "order" | "sample"
-  expected_harvest_date   DateTime
-
-  // Relations
-  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
-  harvest_records         HarvestRecord[]
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_seeding_batch")
-  @@index([crop_id])
-  @@index([seeding_date])
-  @@index([expected_harvest_date])
-}
-
-model HarvestRecord {
-  id                              String   @id @default(cuid())
-  seeding_batch_id                String
-  harvest_date                    DateTime
-  actual_yield_grams              Float
-  yield_used_for_orders_grams     Float    @default(0)
-  yield_available_samples_grams   Float    @default(0)
-  notes                           String?
-
-  // Relations
-  seeding_batch                   SeedingBatch @relation(fields: [seeding_batch_id], references: [id], onDelete: Cascade)
-  fulfillments                    OrderFulfillment[]
-
-  created_at                      DateTime @default(now())
-  updated_at                      DateTime @updatedAt
-
-  @@map("belarro_v3_harvest_record")
-  @@index([seeding_batch_id])
-  @@index([harvest_date])
-}
-
-model OrderFulfillment {
-  id                      String   @id @default(cuid())
-  order_id                String
-  harvest_record_id       String
-  allocated_grams         Float
-  packed_date             DateTime?
-  delivery_date           DateTime?
-  delivered               Boolean  @default(false)
-  delivery_notes          String?
-
-  // Relations
-  order                   Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  harvest_record          HarvestRecord @relation(fields: [harvest_record_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_order_fulfillment")
-  @@index([order_id])
-  @@index([harvest_record_id])
-  @@index([delivery_date])
-}
-
-// ============================================
-// INVOICING (V2 FEATURE)
-// ============================================
-
-model Invoice {
-  id                      String   @id @default(cuid())
-  customer_id             String
-  invoice_month           String   // "YYYY-MM"
-  total_amount_eur        Float
-  vat_amount_eur          Float?
-  status                  String   @default("draft") // "draft" | "sent" | "paid"
-  sent_at                 DateTime?
-  paid_at                 DateTime?
-
-  // Relations
-  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_invoice")
-  @@index([customer_id])
-  @@index([invoice_month])
-  @@unique([customer_id, invoice_month])
-}
-
-// ============================================
-// SEED TRACKING (V2 FEATURE)
-// ============================================
-
-model SeedUsageLog {
-  id                      String   @id @default(cuid())
-  crop_id                 String
-  quantity_used_grams     Float
-  trays_seeded            Int
-  seeded_date             DateTime
-
-  // Relations
-  crop                    Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-
-  @@map("belarro_v3_seed_usage_log")
-  @@index([crop_id])
-  @@index([seeded_date])
-}
-
-// ============================================
-// STANDING ORDERS (V2 FEATURE)
-// ============================================
-
-model StandingOrder {
-  id                      String   @id @default(cuid())
-  customer_id             String
-  status                  String   @default("active") // "active" | "paused" | "inactive"
-  notes                   String?
-
-  // Relations
-  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  items                   StandingOrderItem[]
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_standing_order")
-  @@index([customer_id])
-  @@index([status])
-}
-
-model StandingOrderItem {
-  id                      String   @id @default(cuid())
-  standing_order_id       String
-  variant_id              String
-  size_name               String   // "100g" | "225g" | "450g" | "container"
-  quantity                Int      // qty per delivery
-  price_at_time_eur       Float    // snapshot of price
-  delivery_day_of_week    Int?     // 0-6 for Mon-Sun, if recurring on specific day
-
-  // Relations
-  standing_order          StandingOrder @relation(fields: [standing_order_id], references: [id], onDelete: Cascade)
-  variant                 ProductVariant @relation(fields: [variant_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_standing_order_item")
-  @@index([standing_order_id])
-  @@index([variant_id])
-}
-
-// ============================================
-// SALES VISITS (V2 FEATURE)
-// ============================================
-
-model SalesVisit {
-  id                      String   @id @default(cuid())
-  customer_id             String
-  visit_date              DateTime
-  outcome                 String?  // "interested" | "not_interested" | "sample_sent" | "need_followup"
-  notes                   String?
-
-  // Relations
-  customer                Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  @@map("belarro_v3_sales_visit")
-  @@index([customer_id])
-  @@index([visit_date])
-}
-
-// ============================================
-// MESSAGES (V2 FEATURE)
-// ============================================
-
-model Message {
-  id                      String   @id @default(cuid())
-  from_user_id            String   // user ID (future: when auth added)
-  to_user_id              String   // user ID (future: when auth added)
-  order_id                String?
-  message_text            String
-  read_at                 DateTime?
-
-  // Relations
-  order                   Order?   @relation(fields: [order_id], references: [id], onDelete: SetNull)
-
-  created_at              DateTime @default(now())
-
-  @@map("belarro_v3_message")
-  @@index([from_user_id])
-  @@index([to_user_id])
-  @@index([order_id])
-}
-
-// ============================================
-// GROWTH PROCEDURES (NEW)
-// ============================================
-
-model GrowthStep {
-  id         String   @id @default(cuid())
-  crop_id    String
-  step_order Int
-  step_type  String   // "soak" | "seed" | "stack" | "blackout" | "humidity_dome" | "light" | "cover_soil" | "harvest"
-  duration_hours Int?
-  notes      String?
-
-  // Relations
-  crop       Crop     @relation(fields: [crop_id], references: [id], onDelete: Cascade)
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@map("belarro_v3_growth_step")
-  @@index([crop_id])
-}
-
-// ============================================
-// AUDIT LOG — DATA PROTECTION
+// AUDIT LOG (DATA PROTECTION)
 // ============================================
 
 model AuditLog {
   id          String   @id @default(cuid())
-  action      String   // "CREATE" | "UPDATE" | "DELETE" | "RESTORE"
-  entity_type String   // "Crop" | "ProductVariant" | "Order" etc.
+  action      String   // "CREATE" | "UPDATE" | "DELETE"
+  entity_type String   // "Crop" | "GrowthProcedure" | "ProductVariant"
   entity_id   String   // ID of the changed record
-  user_id     String?  // Future: who made the change
   old_values  String?  // JSON string of previous values
   new_values  String?  // JSON string of new values
-  reason      String?  // Why was this changed
+  reason      String?
 
   created_at  DateTime @default(now())
 
   @@map("belarro_v3_audit_log")
   @@index([entity_type])
   @@index([entity_id])
-  @@index([action])
-  @@index([created_at])
 }
