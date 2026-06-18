@@ -76,6 +76,9 @@ export default function GrowProcedurePage() {
   // Track the order steps were checked
   const [stepOrder, setStepOrder] = useState<string[]>([]);
 
+  // Store all crop steps for calculating totals
+  const [allCropSteps, setAllCropSteps] = useState<Record<string, GrowthStep[]>>({});
+
   useEffect(() => {
     loadCrops();
   }, []);
@@ -110,6 +113,20 @@ export default function GrowProcedurePage() {
 
       setSteps(stepsData);
       setIsEditing(false);
+
+      // Also load steps for all crops to calculate correct sidebar totals
+      try {
+        const allCrops = crops;
+        const cropStepsMap: Record<string, GrowthStep[]> = {};
+
+        for (const crop of allCrops) {
+          const res = await apiClient.getGrowthSteps(crop.id);
+          cropStepsMap[crop.id] = (res.data || []) as GrowthStep[];
+        }
+        setAllCropSteps(cropStepsMap);
+      } catch (e) {
+        console.error('Failed to load all crop steps:', e);
+      }
 
       // Reset all step states
       const newStates: Record<string, StepState> = {};
@@ -160,12 +177,23 @@ export default function GrowProcedurePage() {
     }));
   };
 
-  const calculateTotalDays = () => {
+  const calculateTotalDays = (cropId?: string) => {
+    // If no cropId provided, calculate for selected crop using current state
+    if (!cropId || cropId === selectedCropId) {
+      let totalHours = 0;
+      stepOrder.forEach(type => {
+        if (stepStates[type].enabled) {
+          totalHours += stepStates[type].duration || 0;
+        }
+      });
+      return Math.round(totalHours / 24);
+    }
+
+    // For other crops, calculate from allCropSteps
+    const cropSteps = allCropSteps[cropId] || [];
     let totalHours = 0;
-    stepOrder.forEach(type => {
-      if (stepStates[type].enabled) {
-        totalHours += stepStates[type].duration || 0;
-      }
+    cropSteps.forEach((step: GrowthStep) => {
+      totalHours += step.duration_hours || 0;
     });
     return Math.round(totalHours / 24);
   };
@@ -257,7 +285,7 @@ export default function GrowProcedurePage() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-xs text-gray-600 font-medium">Days</p>
-                      <p className="text-sm font-bold text-green-600 mt-0.5">{calculateTotalDays()}</p>
+                      <p className="text-sm font-bold text-green-600 mt-0.5">{calculateTotalDays(crop.id)}</p>
                     </div>
                   </div>
                 </div>
