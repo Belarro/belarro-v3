@@ -23,6 +23,7 @@ const sections = [
   {
     title: 'Production',
     items: [
+      { label: 'Crop Configuration', href: '/crops/config', icon: LeafIcon },
       { label: 'Crops', href: '/crops', icon: LeafIcon },
       { label: 'Grow Procedure', href: '/grow-procedure', icon: FileTextIcon },
       { label: 'Sizes & Prices', href: '/sizes-prices', icon: CurrencyEuroIcon },
