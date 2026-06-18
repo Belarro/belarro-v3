@@ -198,6 +198,26 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// POST /growth-steps/nuke-all - Delete ALL growth steps (using POST to avoid routing issues)
+router.post('/nuke-all', async (req: Request, res: Response) => {
+  try {
+    const deleted = await prisma.growthStep.deleteMany({});
+
+    return res.json({
+      success: true,
+      message: `Deleted ${deleted.count} growth steps from all crops`,
+      data: { deletedCount: deleted.count },
+    });
+  } catch (error) {
+    console.error('[POST nuke-all] ERROR:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 // DELETE /growth-steps/cleanup/all - Delete ALL growth steps for all crops (DESTRUCTIVE)
 router.delete('/cleanup/all', async (req: Request, res: Response) => {
   try {
