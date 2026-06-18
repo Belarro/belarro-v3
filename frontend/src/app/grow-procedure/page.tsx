@@ -266,11 +266,11 @@ export default function GrowProcedurePage() {
       if (humidityDome.countTowardsDays) {
         total += (humidityDome.duration || 0);
       }
-      return total;
+      return Math.round(total / 24);
     }
     const crop = crops.find((c) => c.id === cropId);
     if (!crop) return 0;
-    return crop.total_growth_days || 0;
+    return Math.round((crop.total_growth_days || 0) / 24);
   };
 
   return (

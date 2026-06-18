@@ -50,17 +50,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     const crops = filtered.map((p: any) => {
       const mappedStatus = p.availability_status === 'available' ? 'active' : (p.availability_status === 'paused' ? 'paused' : 'inactive');
-
-      let totalGrowthDays = 14;
-      const growingStages = p.growing_stages || [];
-      if (Array.isArray(growingStages) && growingStages.length > 0) {
-        const totalHours = growingStages.reduce((sum: number, stage: any) => {
-          const hours = parseInt(stage.duration_hours || stage.duration || 0);
-          return sum + hours;
-        }, 0);
-        totalGrowthDays = Math.ceil(totalHours / 24);
-      }
-
       return {
         id: p.id,
         name_en: p.name_en,
@@ -69,7 +58,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         photo_url: p.photo,
         seeds_per_tray: p.growing_procedure?.seeds_per_tray || 0,
         yield_per_tray: p.yield_per_tray ? parseInt(p.yield_per_tray) : 0,
-        total_growth_days: totalGrowthDays,
+        total_growth_days: 14,
         seeding_schedule: 'TUESDAY',
         status: mappedStatus,
         created_at: p.created_at,
