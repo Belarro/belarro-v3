@@ -38,6 +38,7 @@ interface Crop {
   variants?: ProductVariant[];
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
 }
 
 type Tab = 'basics' | 'procedure' | 'sizes';
